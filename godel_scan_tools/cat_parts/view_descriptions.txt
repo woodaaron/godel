@@ -1,0 +1,6 @@
+1: No part
+2: Part on table (long edge aligned with camera)
+3: Offset 45 deg
+4: Offset 90 deg
+5: Offset 90 deg, angled along long edge
+6: Offset 90 deg, angled along short edge

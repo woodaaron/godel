@@ -1,0 +1,142 @@
+{
+	"Capture": {
+		"AbsoluteBlackLevelOffset": 0,
+		"AutoBlackLevel": false,
+		"AutoExposure": true,
+		"AutoGain": true,
+		"Binning": 1,
+		"BlackLevelOffset": 1,
+		"Exposure": 0.19502510121457492,
+		"FlashDelay": -0.0500000000000000028,
+		"FlexView": 8,
+		"FrontLight": false,
+		"Gain": 1,
+		"GainBoost": false,
+		"HardwareGamma": true,
+		"Hdr": false,
+		"MaxFlashTime": 10,
+		"MaxGain": 4,
+		"PixelClock": 24,
+		"Projector": true,
+		"TargetBrightness": 80,
+		"TriggerMode": "Software",
+		"Triggered": true,
+		"UseDisparityMapAreaOfInterest": false
+	},
+	"DisparityMap": {
+		"AreaOfInterest": {
+			"LeftTop": [
+				0,
+				0
+			],
+			"RightBottom": [
+				1279,
+				1023
+			]
+		},
+		"MeasurementVolume": {
+			"Far": {
+				"DisparityStep": 4.27756324946206412,
+				"LeftBottom": [
+					-172.65055289572075,
+					229.939770036304253,
+					471.688803307573096
+				],
+				"LeftTop": [
+					-172.65055289572075,
+					-236.866854169739497,
+					471.688803307573096
+				],
+				"PixelSize": 0.913515898641964252,
+				"RightBottom": [
+					338.918350343779252,
+					229.939770036304253,
+					471.688803307573096
+				],
+				"RightTop": [
+					338.918350343779252,
+					-236.866854169739497,
+					471.688803307573096
+				]
+			},
+			"Near": {
+				"DisparityStep": 1.46740635724362534,
+				"LeftBottom": [
+					-101.121837269172488,
+					134.676267277093785,
+					276.26924796799392
+				],
+				"LeftTop": [
+					-101.121837269172488,
+					-138.73347684139901,
+					276.26924796799392
+				],
+				"PixelSize": 0.535048422932471235,
+				"RightBottom": [
+					198.505279573011393,
+					134.676267277093785,
+					276.26924796799392
+				],
+				"RightTop": [
+					198.505279573011393,
+					-138.73347684139901,
+					276.26924796799392
+				]
+			}
+		},
+		"PostProcessing": {
+			"Filling": {
+				"BorderSpread": 3,
+				"RegionSize": 150
+			},
+			"MedianFilterRadius": 1,
+			"SpeckleRemoval": {
+				"ComponentThreshold": 3,
+				"RegionSize": 150
+			},
+			"UniquenessOffset": 16,
+			"UniquenessRatio": 10
+		},
+		"Scaling": 0.5,
+		"StereoMatching": {
+			"CostScale": -3,
+			"DepthChangeCost": 5,
+			"DepthStepCost": 30,
+			"MinimumDisparity": -5,
+			"NumberOfDisparities": 144,
+			"OptimizationProfile": "AlignedAndDiagonal",
+			"PropagationDecay": 3,
+			"ScaledMinimumDisparity": -3,
+			"ScaledNumberOfDisparities": 80,
+			"ShadowingThreshold": 1
+		},
+		"ValidRegion": {
+			"LeftTop": [
+				76,
+				0
+			],
+			"RightBottom": [
+				636,
+				511
+			]
+		}
+	},
+	"IO": {
+		"Input": false,
+		"Output": 0.104970220422852006
+	},
+	"Overlay": {
+		"Text": {
+			"Angle": 0,
+			"Color": [
+				255,
+				0,
+				0
+			],
+			"Mirror": {
+				"Horizontal": false,
+				"Vertical": false
+			}
+		}
+	}
+}

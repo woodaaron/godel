@@ -443,7 +443,7 @@ class surfaceSegmentation
 
   void getBoundaryTrajectory(std::vector<pcl::IndicesPtr> &boundaries,
                              int sb,
-                             std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> &poses)
+                             std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &poses)
   {
     // grab the position and normal values
     std::vector<pcl::PointNormal> pts, spts;
@@ -505,7 +505,7 @@ class surfaceSegmentation
     poses.clear();
     for(int i = 0; i < spts.size(); i++)
     {
-      Eigen::Matrix4d current_pose = Eigen::MatrixXd::Identity(4, 4);
+      Eigen::Matrix4f current_pose = Eigen::MatrixXf::Identity(4, 4);
       current_pose(0, 3) = spts[i].x;
       current_pose(1, 3) = spts[i].y;
       current_pose(2, 3) = spts[i].z;

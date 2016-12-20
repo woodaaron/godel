@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(godel_scan_tools)
 
 
+add_definitions(-std=c++11)
+
 FIND_PACKAGE(Eigen3)
 IF (EIGEN3_FOUND)
   MESSAGE(STATUS "Eigen3 found in ${EIGEN_INCLUDE_DIRS}")

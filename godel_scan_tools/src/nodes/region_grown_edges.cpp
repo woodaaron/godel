@@ -311,7 +311,7 @@ main (int argc, char** av)
       sprintf(line_number,"%03d",q++);
       std::string ls = std::string("pose_") + std::string(line_number);
       Eigen::Affine3f pose(refined_pose_trajectory[i].matrix()); // I think this is where it is breaking.
-      viewer->addCoordinateSystem (.030, pose, 0);
+      viewer->addCoordinateSystem (.030, pose, "asdf", 0);
     }
   }
 

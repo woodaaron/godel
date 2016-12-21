@@ -11,6 +11,7 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/io/vtk_io.h>
 #include <pcl/surface/concave_hull.h>
+#include <pcl/kdtree/kdtree_flann.h>
 #include <boost/foreach.hpp>
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
@@ -218,6 +219,41 @@ public:
     refined_poses.clear();
 
     // 1) Find all points within R1 of each boundary pose.
+    std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ> > boundary_pose_radius;
+    boundary_pose_radius.reserve(boundary_poses.size());
+    // boundary_pose_radius.push_back(*cloud);
+
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    kdtree.setInputCloud(input_cloud_);
+
+    std::cout << boundary_poses.size() << std::endl;
+    for (int i = 0; i < boundary_poses.size(); i++)
+    {
+      std::vector<int> pointIdxRadiusSearch;
+      std::vector<float> pointRadiusSquaredDistance;
+
+      pcl::PointXYZ searchpoint;
+      searchpoint.x = boundary_poses[i](0, 3);
+      searchpoint.y = boundary_poses[i](1, 3);
+      searchpoint.z = boundary_poses[i](2, 3);
+
+      std::cout << "pose number: " << i << std::endl;
+      if (kdtree.radiusSearch(searchpoint, radius_, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
+      {
+        for (size_t j = 0; j < pointIdxRadiusSearch.size(); j++)
+        {
+          #if 1
+          std::cout << "   " << input_cloud_->points[pointIdxRadiusSearch[j]].x
+                    << " " << input_cloud_->points[ pointIdxRadiusSearch[j] ].y 
+                    << " " << input_cloud_->points[ pointIdxRadiusSearch[j] ].z 
+                    << " (squared distance: " << pointRadiusSquaredDistance[j] << ")" << std::endl;
+          #endif
+        }
+      }
+
+      //pcl::PointCloud<pcl::PointXYZ>::Ptr radius (new pcl::PointCloud<pcl::PointXYZ>());
+    }
+
     // 2) Determine inliers on the XY plane.
     // 3) Find all points that are boundaries.
     // 4) Find the boundary point that is closest to the original.

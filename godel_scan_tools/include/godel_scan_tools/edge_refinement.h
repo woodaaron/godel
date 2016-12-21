@@ -259,8 +259,8 @@ public:
   }
 
   void nearestNNeighborSearch(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses,
-                                 std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &boundary_pose_neighbor,
-                                 int n)
+                              std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &boundary_pose_neighbor,
+                              int n)
   {
     std::cout << "Finding nearest " << n << " points." << std::endl;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
@@ -289,6 +289,7 @@ public:
     }
 
     std::cout << "Size of boundary_pose_neighbor: " << boundary_pose_neighbor.size() << std::endl;
+
     #if 0
     for (size_t i = 0; i < boundary_pose_radius.size(); i++)
     {
@@ -365,6 +366,13 @@ public:
     std::cout << "Size of refined_boundary_pose_neighbor: " << refined_boundary_pose_neighbor.size() << std::endl;
   }
 
+  void
+  computeBoundaryForRefinedCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_cloud,
+                                 std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_boundary)
+  {
+    pcl::PointCloud<pcl::Boundary>::Ptr boundary_ptr = 
+  }
+
   void 
   refineBoundary(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > &boundary_poses, 
                  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > &refined_poses)
@@ -392,16 +400,17 @@ public:
     refineNeighborPoints(boundary_poses, boundary_pose_radius, refined_boundary_pose_radius);
     refineNeighborPoints(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor);
 
+    #if 1
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::cout << "Boundary Pose Number: " << i << std::endl;
-      //std::cout << boundary_poses[i] << std::endl;
 
       std::cout << "(Radius Search) Number of Neighbors: " << boundary_pose_radius[i].width << std::endl;
       std::cout << "(Radius Search) Number of Refined Neighbors: " << refined_boundary_pose_radius[i].width << std::endl;
       std::cout << "(N-Neighbor Search) Number of Neighbors: " << boundary_pose_neighbor[i].width << std::endl;
       std::cout << "(N-Neighbor Search) Number of Refined Neighbors: " << refined_boundary_pose_neighbor[i].width << std::endl << std::endl;      
     }
+    #endif
 
     // 3) Find all points that are boundaries.
     // 4) Find the boundary point that is closest to the original.

@@ -272,8 +272,8 @@ main (int argc, char** av)
       int idx1 = sorted_boundaries[i]->at(j);
       int idx2 = sorted_boundaries[i]->at(j+1);
       viewer->addLine<pcl::PointXYZ> ( segmented_surface_ptr->points[idx1],
-				       segmented_surface_ptr->points[idx2],
-				      ls.c_str());
+               segmented_surface_ptr->points[idx2],
+              ls.c_str());
       viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
     }// end for each boundary point
     color = (color+1)%6;
@@ -290,7 +290,7 @@ main (int argc, char** av)
   filt_coef.push_back(3);
   filt_coef.push_back(2);
   filt_coef.push_back(1);
-  SS.setSmoothCoef(filt_coef);	// note, automatically normalizes coefficients for unity gain of filter
+  SS.setSmoothCoef(filt_coef);  // note, automatically normalizes coefficients for unity gain of filter
 
   //  std::vector<Pose> pose_trajectory;
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > pose_trajectory;
@@ -300,7 +300,6 @@ main (int argc, char** av)
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > refined_pose_trajectory;
   edgeRefinement EF(bg_cloud_nozeros);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
-
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)
   for(int i = 0; i < refined_pose_trajectory.size(); i++)
@@ -328,7 +327,6 @@ main (int argc, char** av)
     viewer->addLine<pcl::PointXYZ> ( p1,p2,ls.c_str());
     viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
   }// end for each boundary point
-  
   
   if (pcl::console::find_switch (argc, av, "-dump"))
   {

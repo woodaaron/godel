@@ -332,7 +332,7 @@ main (int argc, char** av)
   {
     pcl::console::print_highlight ("Writing clusters to clusters.dat\n");
     std::ofstream clusters_file;
-    clusters_file.open ("clusters.dat");
+    clusters_file.open("clusters.dat");
 
     for (std::size_t i = 0; i < clusters.size (); ++i)
     {

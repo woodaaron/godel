@@ -16,6 +16,7 @@
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
 #include <math.h>
+#include "godel_scan_tools/surface_segmentation.h"
 
 typedef Eigen::Matrix<float, 1, 3> NormalVector;
 typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
@@ -27,13 +28,14 @@ public:
   *   @param cloud input cloud from which you plan to refine a boundary
   */
   edgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
-           tree_(new pcl::search::KdTree<pcl::PointXYZ>()), point_density_(0), edge_direction_(0)
+                tree_(new pcl::search::KdTree<pcl::PointXYZ>()), point_density_(0), edge_direction_(0)
   {
     tree_->setInputCloud(cloud);
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
-    getPointDensity();
+    //getPointDensity();
   }
 
+  #if 0
   /** @brief estimate the number of points per unit volume 
   *   @return number of points per unit vol, units are the same as the inherent distance in the point cloud data
   */
@@ -215,6 +217,7 @@ public:
       refined_edge_pose(2,3) = input_cloud_->points[last_index].z;
     }
   }
+  #endif
 
   void
   nearestNeighborRadiusSearch(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses,
@@ -367,11 +370,83 @@ public:
   }
 
   void
-  computeBoundaryForRefinedCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_cloud,
-                                 std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_boundary)
+  computeNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::Normal> &normals)
   {
-    //pcl::PointCloud<pcl::Boundary>::Ptr boundary_ptr = 
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
+    normal_estimation.setInputCloud(input_cloud);
+    normal_estimation.setSearchMethod(tree);
+    normal_estimation.setKSearch(5);
+    normal_estimation.compute(normals);
   }
+
+  void
+  computeBoundaryForRefinedCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_cloud,
+                                 std::vector<pcl::PointCloud<pcl::Boundary>, Eigen::aligned_allocator<pcl::Boundary>> &refined_boundary)
+  {
+    pcl::PointCloud<pcl::Boundary> boundaries;
+    pcl::PointCloud<pcl::Normal> normals;
+
+    for (size_t i = 0; i < refined_cloud.size(); i++)
+    {
+      pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+      for (const auto &pt : refined_cloud[i].points)
+      {
+        input_cloud->push_back(pt);
+      }
+#if 1
+      boundaries.clear();
+      normals.clear();
+      computeNormals(input_cloud, normals);
+      pcl::PointCloud<pcl::Normal>::Ptr normal_ptr (new pcl::PointCloud<pcl::Normal>);
+      for (const auto &n : normals.points)
+      {
+        normal_ptr->push_back(n);
+      }
+#endif
+#if 1
+      pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
+      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
+      boundary_estimation.setInputCloud(input_cloud);
+      boundary_estimation.setInputNormals(normal_ptr);
+      boundary_estimation.setRadiusSearch(5.0);
+      boundary_estimation.setSearchMethod(tree);
+      boundary_estimation.compute(boundaries);
+
+      refined_boundary.push_back(boundaries);
+#endif
+    }
+  }
+
+#if 1
+  void
+  extractBoundaryPointsFromPointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, 
+                                            Eigen::aligned_allocator<pcl::PointXYZ>> &refined_points_cloud
+                                      const std::vector<pcl::PointCloud<pcl::Boundary>, 
+                                            Eigen::aligned_allocator<pcl::Boundary>> &boundary_cloud
+                                      std::vector<pcl::PointCloud<pcl::PointXYZ>, 
+                                            Eigen::aligned_allocator<pcl::PointXYZ>> &boundary_points
+                                      std::vector<pcl::IndicesPtr>, 
+                                            Eigen::aligned_allocator<pcl::IndicesPtr>> &ids)
+  {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr radius_boundary_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr neighbor_boundary_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>());
+
+    pcl::IndicesPtr radius_boundary_ptr_id(new std::vector<int>());
+    pcl::IndicesPtr neighbor_boundary_ptr_id(new std::vector<int>());
+
+    int a = 0;
+    BOOST_FOREACH(pcl::Boundary bp, radius_boundary->points)
+    {
+      if (bp.boundary_point)
+      {
+        radius_boundary_cloud_ptr->points.push_back(refined_boundary_pose_radius)
+      }
+    }  
+  }
+#endif
 
   void 
   refineBoundary(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > &boundary_poses, 
@@ -379,8 +454,8 @@ public:
   {
     refined_poses.clear();
 
-    float search_radius = 10;
-    int number_of_neighbors = 50;
+    float search_radius = 30.0;
+    int number_of_neighbors = 100;
 
     // 1) Find all points within R1 of each boundary pose.
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> boundary_pose_radius;
@@ -394,25 +469,46 @@ public:
     // 2) Narrow down the radius points at each pose to only lie on the x-y plane of the pose with some error.
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> refined_boundary_pose_radius;
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> refined_boundary_pose_neighbor;
+
     refined_boundary_pose_radius.reserve(boundary_poses.size());
     refined_boundary_pose_neighbor.reserve(boundary_poses.size());
 
     refineNeighborPoints(boundary_poses, boundary_pose_radius, refined_boundary_pose_radius);
     refineNeighborPoints(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor);
 
+    // 3) Find all points that are boundaries.
+    std::vector<pcl::PointCloud<pcl::Boundary>, Eigen::aligned_allocator<pcl::Boundary>> radius_boundary;
+    std::vector<pcl::PointCloud<pcl::Boundary>, Eigen::aligned_allocator<pcl::Boundary>> neighbor_boundary;
+
+    radius_boundary.reserve(boundary_poses.size());
+    neighbor_boundary.reserve(boundary_poses.size());
+    
+    computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary);
+    computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary);
+#if 0
+    std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> radius_boundary_points;
+    std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> neighbor_boundary_points;
+    std::vector<pcl::IndicesPtr>, Eigen::aligned_allocator<pcl::IndicesPtr>> radius_boundary_point_ids;
+    std::vector<pcl::IndicesPtr>, Eigen::aligned_allocator<pcl::IndicesPtr>> neighbor_boundary_point_ids;
+
+    extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
+    extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
+#endif
     #if 1
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
-      std::cout << "Boundary Pose Number: " << i << std::endl;
+      std::cout << std::endl << "Boundary Pose Number: " << i << std::endl;
 
       std::cout << "(Radius Search) Number of Neighbors: " << boundary_pose_radius[i].width << std::endl;
       std::cout << "(Radius Search) Number of Refined Neighbors: " << refined_boundary_pose_radius[i].width << std::endl;
+      std::cout << "(Radius Search) Number of Boundary Points: " << radius_boundary[i].width << std::endl;
+
       std::cout << "(N-Neighbor Search) Number of Neighbors: " << boundary_pose_neighbor[i].width << std::endl;
-      std::cout << "(N-Neighbor Search) Number of Refined Neighbors: " << refined_boundary_pose_neighbor[i].width << std::endl << std::endl;      
+      std::cout << "(N-Neighbor Search) Number of Refined Neighbors: " << refined_boundary_pose_neighbor[i].width << std::endl;  
+      std::cout << "(N-Neighbor Search) Number of Boundary Points: " << neighbor_boundary[i].width << std::endl << std::endl;          
     }
     #endif
 
-    // 3) Find all points that are boundaries.
     // 4) Find the boundary point that is closest to the original.
 
     //int idx = 2;

@@ -247,7 +247,7 @@ public:
           temp_cloud.push_back(input_cloud_->points[pointIdxRadiusSearch[j]]);
         }
       }
-      
+
       boundary_pose_neighbors.push_back(temp_cloud);
     }
 
@@ -312,7 +312,7 @@ public:
       NormalVector normal;
       PoseOrigin pose_origin;
 
-      float allowed_error = 0.05;
+      float allowed_error = 0.10;
 
       normal(0, 0) = boundary_poses[i](0, 2);
       normal(0, 1) = boundary_poses[i](1, 2);
@@ -400,7 +400,6 @@ public:
 
 
 // TODO: Add some sort of ID system???
-#if 1
   void
   extractBoundaryPointsFromPointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, 
                                             Eigen::aligned_allocator<pcl::PointXYZ>> &refined_points_cloud,
@@ -428,16 +427,46 @@ public:
       boundary_points.push_back(temp_cloud);
     }     
   }
-#endif
+
+  static bool
+  containsNaNs(Eigen::Matrix4f matrix)
+  {
+    for (size_t i = 0; i < 4; i++)
+    {
+      for (size_t j = 0; j < 4; j++)
+      {
+        if (std::isnan(matrix(i, j))) { return true; }
+        else { return false; }
+      }
+    }
+  }
 
   void 
-  refineBoundary(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > &boundary_poses, 
-                 std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > &refined_poses)
+  removeNaNFromPoseTrajectory(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &original_boundary_poses,
+                              std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses_no_nan)
+  {
+    for (size_t i = 0; i < original_boundary_poses.size(); i++)
+    {
+      if (!containsNaNs(original_boundary_poses[i]))
+      {
+        boundary_poses_no_nan.push_back(original_boundary_poses[i]);
+      }
+    }
+  }
+
+  void 
+  refineBoundary(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &original_boundary_poses, 
+                 std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &refined_poses)
   {
     refined_poses.clear();
 
     float search_radius = 30.0;
-    int number_of_neighbors = 100;
+    int number_of_neighbors = 300;
+
+    // Remove NaN from input boundary poses.
+    std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> boundary_poses;
+    boundary_poses.reserve(original_boundary_poses.size());
+    removeNaNFromPoseTrajectory(original_boundary_poses, boundary_poses);
 
     // 1) Find all points within R1 of each boundary pose.
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> boundary_pose_radius;
@@ -474,6 +503,13 @@ public:
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
 
+    // TODO: REMOVE NAN FROM POSE TRAJECTORY
+    std::cout << std::endl << "test" << std::endl;
+    std::cout << boundary_poses[boundary_poses.size()-1] << std::endl;
+    std::cout << boundary_poses[boundary_poses.size()-2] << std::endl;
+    std::cout << boundary_poses[boundary_poses.size()-3] << std::endl;
+    std::cout << boundary_poses[boundary_poses.size()-4] << std::endl << std::endl;
+
     #if 1
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
@@ -491,8 +527,8 @@ public:
 
       std::cout << std::endl;        
     }
-    #endif
 
+#endif
     // 4) Find the boundary point that is closest to the original.
 
     //int idx = 2;

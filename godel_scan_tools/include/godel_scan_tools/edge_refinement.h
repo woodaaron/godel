@@ -370,7 +370,7 @@ public:
   computeBoundaryForRefinedCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_cloud,
                                  std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &refined_boundary)
   {
-    pcl::PointCloud<pcl::Boundary>::Ptr boundary_ptr = 
+    //pcl::PointCloud<pcl::Boundary>::Ptr boundary_ptr = 
   }
 
   void 

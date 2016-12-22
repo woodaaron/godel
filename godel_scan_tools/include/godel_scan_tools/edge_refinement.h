@@ -420,31 +420,35 @@ public:
     }
   }
 
+
+// TODO: Add some for of ID system???
 #if 1
   void
   extractBoundaryPointsFromPointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZ>, 
-                                            Eigen::aligned_allocator<pcl::PointXYZ>> &refined_points_cloud
+                                            Eigen::aligned_allocator<pcl::PointXYZ>> &refined_points_cloud,
                                       const std::vector<pcl::PointCloud<pcl::Boundary>, 
-                                            Eigen::aligned_allocator<pcl::Boundary>> &boundary_cloud
+                                            Eigen::aligned_allocator<pcl::Boundary>> &boundary_cloud,
                                       std::vector<pcl::PointCloud<pcl::PointXYZ>, 
-                                            Eigen::aligned_allocator<pcl::PointXYZ>> &boundary_points
-                                      std::vector<pcl::IndicesPtr>, 
-                                            Eigen::aligned_allocator<pcl::IndicesPtr>> &ids)
+                                            Eigen::aligned_allocator<pcl::PointXYZ>> &boundary_points)
   {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr radius_boundary_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::PointCloud<pcl::PointXYZ>::Ptr neighbor_boundary_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>());
+    const float bad_point = std::numeric_limits<float>::quiet_NaN();
 
-    pcl::IndicesPtr radius_boundary_ptr_id(new std::vector<int>());
-    pcl::IndicesPtr neighbor_boundary_ptr_id(new std::vector<int>());
+    pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
-    int a = 0;
-    BOOST_FOREACH(pcl::Boundary bp, radius_boundary->points)
+    for (size_t i = 0; i < refined_points_cloud.size(); i++)
     {
-      if (bp.boundary_point)
+      temp_cloud.clear();
+      int k = 0;
+      for (const auto &pt : boundary_cloud[i].points)
       {
-        radius_boundary_cloud_ptr->points.push_back(refined_boundary_pose_radius)
+        if (pt.boundary_point)
+        {
+          temp_cloud.push_back(refined_points_cloud[i].points[k]);
+        }
+        k++;
       }
-    }  
+      boundary_points.push_back(temp_cloud);
+    }     
   }
 #endif
 
@@ -485,15 +489,15 @@ public:
     
     computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary);
     computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary);
-#if 0
+
+    #if 1
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> radius_boundary_points;
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> neighbor_boundary_points;
-    std::vector<pcl::IndicesPtr>, Eigen::aligned_allocator<pcl::IndicesPtr>> radius_boundary_point_ids;
-    std::vector<pcl::IndicesPtr>, Eigen::aligned_allocator<pcl::IndicesPtr>> neighbor_boundary_point_ids;
 
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
-#endif
+    #endif
+
     #if 1
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
@@ -501,11 +505,15 @@ public:
 
       std::cout << "(Radius Search) Number of Neighbors: " << boundary_pose_radius[i].width << std::endl;
       std::cout << "(Radius Search) Number of Refined Neighbors: " << refined_boundary_pose_radius[i].width << std::endl;
-      std::cout << "(Radius Search) Number of Boundary Points: " << radius_boundary[i].width << std::endl;
+      std::cout << "(Radius Search) Number of Boundary Solutions: " << radius_boundary[i].width << std::endl;
+      std::cout << "(Radius Search) Number of Boundary Points: " << radius_boundary_points[i].width << std::endl;
 
       std::cout << "(N-Neighbor Search) Number of Neighbors: " << boundary_pose_neighbor[i].width << std::endl;
       std::cout << "(N-Neighbor Search) Number of Refined Neighbors: " << refined_boundary_pose_neighbor[i].width << std::endl;  
-      std::cout << "(N-Neighbor Search) Number of Boundary Points: " << neighbor_boundary[i].width << std::endl << std::endl;          
+      std::cout << "(N-Neighbor Search) Number of Boundary Solutions: " << neighbor_boundary[i].width << std::endl;  
+      std::cout << "(N-Neighbor Search) Number of Boundary Points: " << neighbor_boundary_points[i].width << std::endl;
+      
+      std::cout << std::endl;        
     }
     #endif
 

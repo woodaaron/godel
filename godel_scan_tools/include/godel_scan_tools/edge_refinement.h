@@ -25,12 +25,6 @@ typedef std::vector<pcl::PointXYZ> PointVector;
 typedef Eigen::Matrix<float, 1, 3> NormalVector;
 typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
 
-/*
-    TODO:
-    - Typedef all of the long names.
-    - Refactor: Iterate through vectors in main function instead of passing vectors around.
-*/
-
 class edgeRefinement
 {
 public:
@@ -355,7 +349,7 @@ public:
     float search_radius = 30.0;
     int number_of_neighbors = 300;
 
-    // Remove NaN from input boundary poses.
+    // Remove NaNs from input boundary poses.
     EigenPoseMatrix boundary_poses;
     boundary_poses.reserve(original_boundary_poses.size());
     removeNaNFromPoseTrajectory(original_boundary_poses, boundary_poses);

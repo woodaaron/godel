@@ -25,6 +25,7 @@ typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
     TODO:
     - Calculate boundary point closest to the pose point, keep orientation the same.
     - Typedef all of the long names.
+    - Refactor: Iterate through vectors in main function instead of passing vectors around.
 */
 
 class edgeRefinement
@@ -134,7 +135,7 @@ public:
       NormalVector normal;
       PoseOrigin pose_origin;
 
-      float allowed_error = 0.10;
+      float allowed_error = 0.15;
 
       normal(0, 0) = boundary_poses[i](0, 2);
       normal(0, 1) = boundary_poses[i](1, 2);
@@ -165,6 +166,7 @@ public:
           temp_cloud.push_back(boundary_pose_neighbor[i].points[j]);
         }
       }
+
       refined_boundary_pose_neighbor.push_back(temp_cloud);
     }
   }
@@ -247,6 +249,7 @@ public:
 
         k++;
       }
+
       boundary_points.push_back(temp_cloud);
     }     
   }
@@ -278,9 +281,76 @@ public:
   }
 
   static void
-  calculateClosestPointInBoundaryToPose()
+  calculateClosestPointInBoundaryToPose(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses,
+                                        const std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> &extracted_boundary_points,
+                                        std::vector<pcl::PointXYZ> &new_pose_points)
   {
+    int K = 1;
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    pcl::PointXYZ searchpoint;
 
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    for (size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      kdtree.setInputCloud(extracted_boundary_points[i].makeShared());
+
+      searchpoint.x = boundary_poses[i](0, 3);
+      searchpoint.y = boundary_poses[i](1, 3);
+      searchpoint.z = boundary_poses[i](2, 3);
+
+      pcl::PointXYZ temp_point;
+
+      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+      {
+        for (size_t j = 0; j < pointIdxNKNSearch.size(); j++)
+        {
+          temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].x;
+          temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].y;
+          temp_point.z = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].z;
+        }
+
+        new_pose_points.push_back(temp_point);
+      }
+    }
+  }
+
+  static void
+  comparePoints(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses,
+                const std::vector<pcl::PointXYZ> &radius_new_boundary_points,
+                const std::vector<pcl::PointXYZ> &neighbor_new_boundary_points)
+  {
+    assert(boundary_poses.size() == radius_new_boundary_points.size());
+    assert(boundary_poses.size() == neighbor_new_boundary_points.size());
+
+    for (size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      std::cout << "Old Boundary Point: " << "x: " << boundary_poses[i](0, 3) << ", y: " << boundary_poses[i](1, 3) <<
+                ", z: " << boundary_poses[i](2, 3) << std::endl;
+      std::cout << "Radius New Boundary Point: " << "x: " << radius_new_boundary_points[i].x << ", y: " << radius_new_boundary_points[i].y <<
+                ", z: " << radius_new_boundary_points[i].z << std::endl;
+      std::cout << "Neighbor New Boundary Point: " << "x: " << neighbor_new_boundary_points[i].x << ", y: " << neighbor_new_boundary_points[i].y <<
+                ", z: " << neighbor_new_boundary_points[i].z << std::endl << std::endl;                
+    }
+  }
+
+  static void
+  movePoseToNewPoint(const std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &boundary_poses,
+                     const std::vector<pcl::PointXYZ> &new_boundary_points,
+                     std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> &refined_poses)
+  {
+    Eigen::Matrix4f temp_pose;
+
+    for (size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      temp_pose = boundary_poses[i];
+      temp_pose(0, 3) = new_boundary_points[i].x;
+      temp_pose(1, 3) = new_boundary_points[i].y;
+      temp_pose(2, 3) = new_boundary_points[i].z;
+
+      refined_poses.push_back(temp_pose);
+    }
   }
 
   void 
@@ -329,12 +399,26 @@ public:
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> radius_boundary_points;
     std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> neighbor_boundary_points;
 
+    radius_boundary_points.reserve(boundary_poses.size());
+    neighbor_boundary_points.reserve(boundary_poses.size());
+
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
 
     // 4) Find the boundary point that is closest to the original.
+    std::vector<pcl::PointXYZ> radius_new_pose_points;
+    std::vector<pcl::PointXYZ> neighbor_new_pose_points;
 
-    #if 1
+    radius_new_pose_points.reserve(boundary_poses.size());
+    neighbor_new_pose_points.reserve(boundary_poses.size());
+
+    calculateClosestPointInBoundaryToPose(boundary_poses, radius_boundary_points, radius_new_pose_points);
+    calculateClosestPointInBoundaryToPose(boundary_poses, neighbor_boundary_points, neighbor_new_pose_points);
+
+    // 5) Move original boundary pose point to new point while keeping same orientation
+    movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
+
+    #if 0
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::cout << std::endl << "Boundary Pose Number: " << i << std::endl;
@@ -352,6 +436,7 @@ public:
       std::cout << std::endl;        
     }
     #endif
+    //comparePoints(boundary_poses, radius_new_pose_points, neighbor_new_pose_points);
 
     //int idx = 2;
 

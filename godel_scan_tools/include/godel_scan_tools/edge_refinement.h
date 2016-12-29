@@ -7,16 +7,8 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/surface/gp3.h>
 #include <pcl/features/boundary.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/io/ply_io.h>
-#include <pcl/io/vtk_io.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <boost/foreach.hpp>
-#include <Eigen/Geometry>
-#include <Eigen/StdVector>
-#include <math.h>
-//#include "godel_scan_tools/surface_segmentation.h"
 
 namespace godel_scan_tools
 {

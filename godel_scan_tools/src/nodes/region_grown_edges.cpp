@@ -298,7 +298,7 @@ main (int argc, char** av)
   pcl::console::print_highlight ("pose_trajectory has %d poses\n", pose_trajectory.size());
   
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > refined_pose_trajectory;
-  edgeRefinement EF(bg_cloud_nozeros);
+  godel_scan_tools::EdgeRefinement EF(bg_cloud_nozeros);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)

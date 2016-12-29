@@ -16,7 +16,10 @@
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
 #include <math.h>
-#include "godel_scan_tools/surface_segmentation.h"
+//#include "godel_scan_tools/surface_segmentation.h"
+
+namespace godel_scan_tools
+{
 
 typedef std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> PointCloudVector;
 typedef std::vector<pcl::PointCloud<pcl::Boundary>, Eigen::aligned_allocator<pcl::Boundary>> PointCloudBoundaryVector;
@@ -25,14 +28,16 @@ typedef std::vector<pcl::PointXYZ> PointVector;
 typedef Eigen::Matrix<float, 1, 3> NormalVector;
 typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
 
-class edgeRefinement
+class EdgeRefinement
 {
 public:
-  /** @brief constructor 
+  /*
+  *   @brief constructor 
   *   @param cloud input cloud from which you plan to refine a boundary
   */
-  edgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
-                tree_(new pcl::search::KdTree<pcl::PointXYZ>()), point_density_(0), edge_direction_(0)
+  EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
+                tree_(new pcl::search::KdTree<pcl::PointXYZ>()), 
+                point_density_(0), edge_direction_(0)
   {
     tree_->setInputCloud(cloud);
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
@@ -313,12 +318,17 @@ public:
 
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
-      std::cout << "Old Boundary Point: " << "x: " << boundary_poses[i](0, 3) << ", y: " << boundary_poses[i](1, 3) <<
-                ", z: " << boundary_poses[i](2, 3) << std::endl;
-      std::cout << "Radius New Boundary Point: " << "x: " << radius_new_boundary_points[i].x << ", y: " << radius_new_boundary_points[i].y <<
-                ", z: " << radius_new_boundary_points[i].z << std::endl;
-      std::cout << "Neighbor New Boundary Point: " << "x: " << neighbor_new_boundary_points[i].x << ", y: " << neighbor_new_boundary_points[i].y <<
-                ", z: " << neighbor_new_boundary_points[i].z << std::endl << std::endl;                
+      std::cout << "Old Boundary Point: " << "x: " << boundary_poses[i](0, 3) 
+                << ", y: " << boundary_poses[i](1, 3) << ", z: " 
+                << boundary_poses[i](2, 3) << std::endl;
+      std::cout << "Radius New Boundary Point: " << "x: " 
+                << radius_new_boundary_points[i].x << ", y: " 
+                << radius_new_boundary_points[i].y 
+                << ", z: " << radius_new_boundary_points[i].z << std::endl;
+      std::cout << "Neighbor New Boundary Point: " << "x: " 
+                << neighbor_new_boundary_points[i].x << ", y: " 
+                << neighbor_new_boundary_points[i].y 
+                << ", z: " << neighbor_new_boundary_points[i].z << std::endl << std::endl;                
     }
   }
 
@@ -347,7 +357,7 @@ public:
     refined_poses.clear();
 
     float search_radius = 30.0;
-    int number_of_neighbors = 300;
+    int number_of_neighbors = 500;
 
     // Remove NaNs from input boundary poses.
     EigenPoseMatrix boundary_poses;
@@ -434,5 +444,5 @@ private:
   double sradius_;
   int edge_direction_;
 };
-
+} // namespace godel_scan_tools
 #endif // EDGE_REFINEMENT_H

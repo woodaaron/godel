@@ -356,8 +356,8 @@ public:
   {
     refined_poses.clear();
 
-    float search_radius = 30.0;
-    int number_of_neighbors = 500;
+    float search_radius = 50.0;
+    int number_of_neighbors = 1000;
 
     // Remove NaNs from input boundary poses.
     EigenPoseMatrix boundary_poses;
@@ -370,7 +370,7 @@ public:
     boundary_pose_radius.reserve(boundary_poses.size());
     boundary_pose_neighbor.reserve(boundary_poses.size());
 
-    //nearestNeighborRadiusSearch(input_cloud_, boundary_poses, boundary_pose_radius, search_radius);
+    // nearestNeighborRadiusSearch(input_cloud_, boundary_poses, boundary_pose_radius, search_radius);
     nearestNNeighborSearch(input_cloud_, boundary_poses, boundary_pose_neighbor, number_of_neighbors);
 
     // 2) Narrow down the radius points at each pose to only lie on the x-y plane of the pose with some error.
@@ -380,7 +380,7 @@ public:
     refined_boundary_pose_radius.reserve(boundary_poses.size());
     refined_boundary_pose_neighbor.reserve(boundary_poses.size());
 
-    //refineNeighborPoints(boundary_poses, boundary_pose_radius, refined_boundary_pose_radius);
+    // refineNeighborPoints(boundary_poses, boundary_pose_radius, refined_boundary_pose_radius);
     refineNeighborPoints(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor);
 
     // 3) Find all points that are boundaries.
@@ -390,7 +390,7 @@ public:
     radius_boundary.reserve(boundary_poses.size());
     neighbor_boundary.reserve(boundary_poses.size());
     
-    //computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary);
+    // computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary);
     computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary);
 
     PointCloudVector radius_boundary_points;
@@ -399,7 +399,7 @@ public:
     radius_boundary_points.reserve(boundary_poses.size());
     neighbor_boundary_points.reserve(boundary_poses.size());
 
-    //extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
+    // extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
     extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
 
     // 4) Find the boundary point that is closest to the original.
@@ -409,11 +409,11 @@ public:
     radius_new_pose_points.reserve(boundary_poses.size());
     neighbor_new_pose_points.reserve(boundary_poses.size());
 
-    //calculateClosestPointInBoundaryToPose(boundary_poses, radius_boundary_points, radius_new_pose_points);
+    // calculateClosestPointInBoundaryToPose(boundary_poses, radius_boundary_points, radius_new_pose_points);
     calculateClosestPointInBoundaryToPose(boundary_poses, neighbor_boundary_points, neighbor_new_pose_points);
 
     // 5) Move original boundary pose point to new point while keeping same orientation
-    //movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
+    // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
     #if 0

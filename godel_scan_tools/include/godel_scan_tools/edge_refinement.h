@@ -1,3 +1,11 @@
+/*
+    TODO:
+    - More comments describing each section of the code
+    - Add getter/setter functions for all hard coded values and set defaults.
+    - Adjust boundary estimator parameters.
+    - Add debugging display.
+*/
+
 #ifndef EDGE_REFINEMENT_H
 #define EDGE_REFINEMENT_H
 

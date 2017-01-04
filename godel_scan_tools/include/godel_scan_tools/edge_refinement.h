@@ -15,6 +15,7 @@
 #ifndef EDGE_REFINEMENT_H
 #define EDGE_REFINEMENT_H
 
+#include <pcl/common/common.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
@@ -47,6 +48,7 @@ public:
   {
     tree_->setInputCloud(cloud);
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
+    visual_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
     getPointDensity();
   }
 
@@ -478,6 +480,54 @@ public:
     return search_radius_;
   }
 
+  void
+  debugDisplay(const EigenPoseMatrix &boundary_poses,
+               const PointCloudVector &boundary_pose_neighbor,
+               const PointCloudVector &refined_boundary_pose_neighbor,
+               const PointCloudBoundaryVector &neighbor_boundary,
+               const PointCloudVector &neighbor_boundary_points,
+               const PointVector &new_pose_points,
+               const EigenPoseMatrix &refined_poses)
+  {
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
+    
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Debug Display"));
+    viewer->setBackgroundColor (0, 0, 0);
+    viewer->initCameraParameters();
+    viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 0.5, "input cloud");
+
+    size_t temp_i = 100;
+    //for (size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      pcl::PointXYZ pose_point;
+      pose_point.x = boundary_poses[temp_i](0, 3);
+      pose_point.y = boundary_poses[temp_i](1, 3);
+      pose_point.z = boundary_poses[temp_i](2, 3);
+      viewer->addSphere(pose_point, 2.5, (102.0/255.0), 1.0, 0.0, "pose point");
+      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(boundary_pose_neighbor[temp_i], 0, 255, 0);
+      viewer->addPointCloud<pcl::PointXYZ> (boundary_pose_neighbor[temp_i], single_color "nearest N neighbors");
+      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "nearest N neighbors");
+    }
+
+    while (!viewer->wasStopped())
+    {
+      viewer->spinOnce (100);
+      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+    }    
+  }
+
+  void
+  setVisualCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud_ptr)
+  {
+    visual_cloud_->clear();
+
+    for(const auto &pt : *colored_cloud_ptr)
+    {
+      visual_cloud_->push_back(pt);
+    }
+  }
+
   void 
   refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
                  EigenPoseMatrix &refined_poses)
@@ -541,6 +591,9 @@ public:
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
+    debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
+                 neighbor_boundary, neighbor_boundary_points, neighbor_new_pose_points, refined_poses);
+
     #if 0
     for (size_t i = 0; i < boundary_poses.size(); i++)
     {
@@ -572,6 +625,7 @@ private:
   float boundary_search_radius_;
   float search_radius_;
   int number_of_neighbors_;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr visual_cloud_;
 };
 } // namespace godel_scan_tools
 #endif // EDGE_REFINEMENT_H

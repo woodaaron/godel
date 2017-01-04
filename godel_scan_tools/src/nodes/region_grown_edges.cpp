@@ -261,6 +261,7 @@ main (int argc, char** av)
   red[5] = 1.0; green[5] =1.0;   blue[5] = 0.0; 
 
   int q = 0;
+#if 1
   for(int i=0;i<  sorted_boundaries.size();i++)
   {
     for(int j=0; j<sorted_boundaries[i]->size()-1; j++)
@@ -278,6 +279,7 @@ main (int argc, char** av)
     }// end for each boundary point
     color = (color+1)%6;
   } // end for each boundary 
+#endif
 
   // set up smoothing for trajectory
   std::vector<double> filt_coef;
@@ -299,9 +301,13 @@ main (int argc, char** av)
   
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > refined_pose_trajectory;
   godel_scan_tools::EdgeRefinement EF(bg_cloud_nozeros);
-  EF.setSearchRadius(50.0);
-  EF.setNumberOfNeighbors(1000);
+  // EF.setSearchRadius(50.0);
+  // EF.setNumberOfNeighbors(1000);
+  // EF.setBoundarySearchRadius(5.0);
+  EF.setSearchRadius(10.0);
+  EF.setNumberOfNeighbors(5000);
   EF.setBoundarySearchRadius(5.0);
+  EF.setVisualCloud(colored_cloud_ptr);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
 
   q = 0;
@@ -320,6 +326,7 @@ main (int argc, char** av)
 
   color = (color+2)%6;
 
+#if 1
   // for(int j=0; j<refined_pose_trajectory.size()-1; j++)
   for(int j=0; j<refined_pose_trajectory.size(); j++) // Removing -1 fixes this segfault.
   {
@@ -331,7 +338,8 @@ main (int argc, char** av)
     viewer->addLine<pcl::PointXYZ> ( p1,p2,ls.c_str());
     viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
   }// end for each boundary point
-  
+#endif
+
   if (pcl::console::find_switch (argc, av, "-dump"))
   {
     pcl::console::print_highlight ("Writing clusters to clusters.dat\n");

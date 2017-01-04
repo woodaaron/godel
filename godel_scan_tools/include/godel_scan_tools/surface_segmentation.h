@@ -26,7 +26,7 @@
 
 static const int MAX_CLUSTER_SIZE = 100000;
 static const int MIN_CLUSTER_SIZE = 2500;
-static const int NUM_NEIGHBORS = 30;
+static const int NUM_NEIGHBORS = 100; // Was 30
 
 
 template <bool IsManifoldT>

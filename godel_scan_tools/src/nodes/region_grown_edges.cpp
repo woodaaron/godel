@@ -299,7 +299,10 @@ main (int argc, char** av)
   
   std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > refined_pose_trajectory;
   godel_scan_tools::EdgeRefinement EF(bg_cloud_nozeros);
+  EF.setSearchRadius(50.0);
+  EF.setNumberOfNeighbors(1000);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
+
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)
   for(int i = 0; i < refined_pose_trajectory.size(); i++)

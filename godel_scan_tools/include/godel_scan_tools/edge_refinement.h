@@ -399,13 +399,34 @@ public:
   }
 
   void 
+  setNumberOfNeighbors(int number_of_neighbors)
+  {
+    number_of_neighbors_ = number_of_neighbors;
+  }
+
+  int 
+  getNumberOfNeighbors(void)
+  {
+    return number_of_neighbors_;
+  }
+
+  void 
+  setSearchRadius(float search_radius)
+  {
+    search_radius_ = search_radius;
+  }
+
+  float 
+  getSearchRadius(void)
+  {
+    return search_radius_;
+  }
+
+  void 
   refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
                  EigenPoseMatrix &refined_poses)
   {
     refined_poses.clear();
-
-    float search_radius = 50.0;
-    int number_of_neighbors = 1000;
 
     // Remove NaNs from input boundary poses.
     EigenPoseMatrix boundary_poses;
@@ -418,8 +439,8 @@ public:
     boundary_pose_radius.reserve(boundary_poses.size());
     boundary_pose_neighbor.reserve(boundary_poses.size());
 
-    // nearestNeighborRadiusSearch(input_cloud_, boundary_poses, boundary_pose_radius, search_radius);
-    nearestNNeighborSearch(input_cloud_, boundary_poses, boundary_pose_neighbor, number_of_neighbors);
+    // nearestNeighborRadiusSearch(input_cloud_, boundary_poses, boundary_pose_radius, search_radius_);
+    nearestNNeighborSearch(input_cloud_, boundary_poses, boundary_pose_neighbor, number_of_neighbors_);
 
     // 2) Narrow down the radius points at each pose to only lie on the x-y plane of the pose with some error.
     PointCloudVector refined_boundary_pose_radius;

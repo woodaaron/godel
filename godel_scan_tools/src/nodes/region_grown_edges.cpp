@@ -301,6 +301,7 @@ main (int argc, char** av)
   godel_scan_tools::EdgeRefinement EF(bg_cloud_nozeros);
   EF.setSearchRadius(50.0);
   EF.setNumberOfNeighbors(1000);
+  EF.setBoundarySearchRadius(5.0);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
 
   q = 0;

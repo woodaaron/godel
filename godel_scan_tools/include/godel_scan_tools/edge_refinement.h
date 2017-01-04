@@ -1,11 +1,11 @@
 /*
     TODO:
     - Add more comments describing what each section of code is doing.
-    - Calculate tolerance of a local plane by checking the standard deviation of the deviation 
+    [x] Calculate tolerance of a local plane by checking the standard deviation of the deviation 
       of the nearby points to determine if it is an outlier.
     - Adjust boundary estimator constant.
-    - Set boundary threshold value. (Set the angle threshold for a point to be a normal)
-    - Define a variable for boundary threshold and comment regarding the physical meaning.
+    [?] Set boundary threshold value. (Set the angle threshold for a point to be a normal)
+    [1/2] Define a variable for boundary threshold and comment regarding the physical meaning.
     - Create a debugging display for updating one pose.
       - Show original point cloud in one color, the points within a radius in another color,
         those that fit on the plane in another, the boundary points in another.
@@ -50,6 +50,7 @@ public:
     getPointDensity();
   }
 
+#if 1
   float 
   getPointDensity(void)
   {
@@ -77,7 +78,7 @@ public:
         }
       }
 
-      printf("maxd = %lf\n",maxd);
+      //printf("maxd = %lf\n",maxd);
 
       double r = sqrt(maxd);
       double v = 4/3*3.14*r*r*r; /* volume containing K points Kpts/V */
@@ -85,7 +86,7 @@ public:
       point_density_ = K/v; // k pts per vol
       radius_ = cbrt(3/(4*3.13*point_density_))/150;
 
-      printf("calculated radius_=%f\n",radius_);
+      //printf("calculated radius_ = %f\n",radius_);
       sradius_ = radius_;
     }
 
@@ -96,6 +97,7 @@ public:
     }
     return(point_density_);
   }
+#endif
 
   static void
   nearestNeighborRadiusSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
@@ -187,7 +189,8 @@ public:
       NormalVector normal;
       PoseOrigin pose_origin;
 
-      float allowed_error = 0.15;
+      std::vector<float> deviations;
+      deviations.reserve(boundary_pose_neighbor[i].size());      
 
       normal(0, 0) = boundary_poses[i](0, 2);
       normal(0, 1) = boundary_poses[i](1, 2);
@@ -202,6 +205,19 @@ public:
       float c = normal(0, 2);
 
       float dot_product = pose_origin.dot(normal);
+
+      // Calcualtes the deviation of the nearby points from the plane.
+      for (size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
+      {
+        float x = boundary_pose_neighbor[i].points[j].x;
+        float y = boundary_pose_neighbor[i].points[j].y;
+        float z = boundary_pose_neighbor[i].points[j].z;
+
+        float plane = calculatePlane(a, b, c, x, y, z, dot_product);
+        deviations.push_back(std::abs(plane));        
+      }
+
+      float allowed_error = calculateAllowedDeviation(deviations);
 
       pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
@@ -223,6 +239,26 @@ public:
     }
   }
 
+  // Calcualtes standard deviation of the deviations.
+  // http://stackoverflow.com/questions/7616511/calculate-mean-and-standard-deviation-from-a-vector-of-samples-in-c-using-boos
+  static float 
+  calculateAllowedDeviation(const std::vector<float> &deviations)
+  {
+    float allowed_deviation;
+
+    float sum = std::accumulate(deviations.begin(), deviations.end(), 0.0);
+    float mean = sum / deviations.size();
+
+    std::vector<float> diff(deviations.size());
+    std::transform(deviations.begin(), deviations.end(), diff.begin(), [mean](double x) { return x - mean; });
+    float sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+    float stdev = std::sqrt(sq_sum / deviations.size());
+
+    allowed_deviation = stdev;
+
+    return allowed_deviation;
+  }
+
   static void
   computeNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::Normal> &normals)
   {
@@ -237,7 +273,8 @@ public:
 
   static void
   computeBoundaryForRefinedCloud(const PointCloudVector &refined_cloud,
-                                 PointCloudBoundaryVector &refined_boundary)
+                                 PointCloudBoundaryVector &refined_boundary,
+                                 const float boundary_search_radius)
   {
     pcl::PointCloud<pcl::Boundary> boundaries;
     pcl::PointCloud<pcl::Normal> normals;
@@ -265,8 +302,9 @@ public:
 
       boundary_estimation.setInputCloud(input_cloud);
       boundary_estimation.setInputNormals(normal_ptr);
-      boundary_estimation.setRadiusSearch(5.0);
+      boundary_estimation.setRadiusSearch(boundary_search_radius);
       boundary_estimation.setSearchMethod(tree);
+      boundary_estimation.setAngleThreshold(90.0 * 3.14 / 180.0); // Defaults to PI/2 according to the documentation...
       boundary_estimation.compute(boundaries);
 
       refined_boundary.push_back(boundaries);
@@ -405,6 +443,18 @@ public:
   }
 
   void 
+  setBoundarySearchRadius(float search_radius)
+  {
+    boundary_search_radius_ = search_radius;
+  }
+
+  float
+  getBoundarySearchRadius(void)
+  {
+    return boundary_search_radius_;
+  }
+
+  void 
   setNumberOfNeighbors(int number_of_neighbors)
   {
     number_of_neighbors_ = number_of_neighbors;
@@ -465,8 +515,8 @@ public:
     radius_boundary.reserve(boundary_poses.size());
     neighbor_boundary.reserve(boundary_poses.size());
     
-    // computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary);
-    computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary);
+    // computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary, boundary_search_radius_);
+    computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary, boundary_search_radius_);
 
     PointCloudVector radius_boundary_points;
     PointCloudVector neighbor_boundary_points;
@@ -519,6 +569,7 @@ private:
   double sradius_;
   int edge_direction_;
 
+  float boundary_search_radius_;
   float search_radius_;
   int number_of_neighbors_;
 };

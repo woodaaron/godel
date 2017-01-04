@@ -1,9 +1,15 @@
 /*
     TODO:
-    - More comments describing each section of the code
-    - Add getter/setter functions for all hard coded values and set defaults.
-    - Adjust boundary estimator parameters.
-    - Add debugging display.
+    - Add more comments describing what each section of code is doing.
+    - Calculate tolerance of a local plane by checking the standard deviation of the deviation 
+      of the nearby points to determine if it is an outlier.
+    - Adjust boundary estimator constant.
+    - Set boundary threshold value. (Set the angle threshold for a point to be a normal)
+    - Define a variable for boundary threshold and comment regarding the physical meaning.
+    - Create a debugging display for updating one pose.
+      - Show original point cloud in one color, the points within a radius in another color,
+        those that fit on the plane in another, the boundary points in another.
+        - Do this display step by step to make sure it is doing exactly what we expect at each step.
 */
 
 #ifndef EDGE_REFINEMENT_H

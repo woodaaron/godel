@@ -41,6 +41,54 @@ public:
   {
     tree_->setInputCloud(cloud);
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
+    getPointDensity();
+  }
+
+  float 
+  getPointDensity(void)
+  {
+    if(point_density_ > 0) 
+      return(point_density_);
+
+    int n = input_cloud_->points.size();
+    int K = 100;
+
+    pcl::PointXYZ pt = input_cloud_->points[n/1];
+    std::vector<int> pt_indices(K);
+    std::vector<float> pt_sq_distances(K);
+
+    int num_found;
+    if((num_found = tree_->nearestKSearch(pt, K, pt_indices, pt_sq_distances))>0)
+    {
+      double maxd = 0;
+      int maxi = 0;
+      for(int i = 0; i < K; i++) // note, there should be one point with zero distance
+      {
+        if(maxd < pt_sq_distances[i]) 
+        {
+          maxd = pt_sq_distances[i];
+          maxi = i;
+        }
+      }
+
+      printf("maxd = %lf\n",maxd);
+
+      double r = sqrt(maxd);
+      double v = 4/3*3.14*r*r*r; /* volume containing K points Kpts/V */
+
+      point_density_ = K/v; // k pts per vol
+      radius_ = cbrt(3/(4*3.13*point_density_))/150;
+
+      printf("calculated radius_=%f\n",radius_);
+      sradius_ = radius_;
+    }
+
+    else
+    {
+      printf("Could not find %d points near center of input_cloud_\n",K);
+      point_density_ = 0.0;
+    }
+    return(point_density_);
   }
 
   static void
@@ -443,6 +491,9 @@ private:
   double radius_;
   double sradius_;
   int edge_direction_;
+
+  float search_radius_;
+  int number_of_neighbors_;
 };
 } // namespace godel_scan_tools
 #endif // EDGE_REFINEMENT_H

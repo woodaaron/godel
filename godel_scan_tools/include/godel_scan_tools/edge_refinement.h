@@ -492,18 +492,20 @@ public:
 
     if (event.getKeySym() == "Right" && event.keyDown())
     {
-      if (CURRENT_POSE_INDEX > 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      if (CURRENT_POSE_INDEX >= 0 || CURRENT_POSE_INDEX <= NUM_POSES)
       {
-        CURRENT_POSE_INDEX++;
+        if (CURRENT_POSE_INDEX == NUM_POSES) { CURRENT_POSE_INDEX = 0; }
+        else { CURRENT_POSE_INDEX++; }
       }
       std::cout << CURRENT_POSE_INDEX << std::endl;
     }
 
     if (event.getKeySym() == "Left" && event.keyDown())
     {
-      if (CURRENT_POSE_INDEX > 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      if (CURRENT_POSE_INDEX >= 0 || CURRENT_POSE_INDEX <= NUM_POSES)
       {
-        CURRENT_POSE_INDEX--;
+        if (CURRENT_POSE_INDEX == 0) { CURRENT_POSE_INDEX = NUM_POSES; }
+        else { CURRENT_POSE_INDEX--; }
       }
       std::cout << CURRENT_POSE_INDEX << std::endl;
     }

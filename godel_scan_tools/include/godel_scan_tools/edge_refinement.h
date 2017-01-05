@@ -25,6 +25,10 @@
 #include <pcl/surface/concave_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
+// Yea this is bad but i'm too tired to figure out how to implement this.
+size_t CURRENT_POSE_INDEX = 0;
+size_t NUM_POSES;
+
 namespace godel_scan_tools
 {
 
@@ -480,6 +484,43 @@ public:
     return search_radius_;
   }
 
+  static void 
+  keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
+                        void* viewer_void)
+  {
+    pcl::visualization::PCLVisualizer *viewer = static_cast<pcl::visualization::PCLVisualizer *> (viewer_void);
+
+    if (event.getKeySym() == "Right" && event.keyDown())
+    {
+      if (CURRENT_POSE_INDEX >= 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      {
+        CURRENT_POSE_INDEX++;
+      }
+      std::cout << CURRENT_POSE_INDEX << std::endl;
+    }
+
+    if (event.getKeySym() == "Left" && event.keyDown())
+    {
+      if (CURRENT_POSE_INDEX >= 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      {
+        CURRENT_POSE_INDEX--;
+      }
+      std::cout << CURRENT_POSE_INDEX << std::endl;
+    }
+  }
+
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> 
+  interactionCustomizationVis(void)
+  {
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Debug Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    viewer->addCoordinateSystem(1.0);
+
+    viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)viewer.get());
+
+    return (viewer);
+  }
+
   void
   debugDisplay(const EigenPoseMatrix &boundary_poses,
                const PointCloudVector &boundary_pose_neighbor,
@@ -491,11 +532,13 @@ public:
   {
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
     
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Debug Display"));
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
+    viewer = interactionCustomizationVis();
+
     viewer->setBackgroundColor (0, 0, 0);
     viewer->initCameraParameters();
     viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 0.5, "input cloud");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
 
     size_t temp_i = 100;
     //for (size_t i = 0; i < boundary_poses.size(); i++)
@@ -504,16 +547,16 @@ public:
       pose_point.x = boundary_poses[temp_i](0, 3);
       pose_point.y = boundary_poses[temp_i](1, 3);
       pose_point.z = boundary_poses[temp_i](2, 3);
-      viewer->addSphere(pose_point, 2.5, (102.0/255.0), 1.0, 0.0, "pose point");
-      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(boundary_pose_neighbor[temp_i], 0, 255, 0);
-      viewer->addPointCloud<pcl::PointXYZ> (boundary_pose_neighbor[temp_i], single_color "nearest N neighbors");
+      viewer->addSphere(pose_point, 2.5, 1.0, 0.0, 0.0, "pose point");
+      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(boundary_pose_neighbor[temp_i].makeShared(), 0, 255, 0);
+      viewer->addPointCloud<pcl::PointXYZ> (boundary_pose_neighbor[temp_i].makeShared(), single_color, "nearest N neighbors");
       viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "nearest N neighbors");
     }
 
     while (!viewer->wasStopped())
     {
       viewer->spinOnce (100);
-      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+      boost::this_thread::sleep(boost::posix_time::microseconds (100000));
     }    
   }
 
@@ -538,6 +581,7 @@ public:
     EigenPoseMatrix boundary_poses;
     boundary_poses.reserve(original_boundary_poses.size());
     removeNaNFromPoseTrajectory(original_boundary_poses, boundary_poses);
+    NUM_POSES = boundary_poses.size();
 
     // 1) Find all points within R1 of each boundary pose.
     PointCloudVector boundary_pose_radius;

@@ -492,7 +492,7 @@ public:
 
     if (event.getKeySym() == "Right" && event.keyDown())
     {
-      if (CURRENT_POSE_INDEX >= 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      if (CURRENT_POSE_INDEX > 0 && CURRENT_POSE_INDEX < NUM_POSES)
       {
         CURRENT_POSE_INDEX++;
       }
@@ -501,7 +501,7 @@ public:
 
     if (event.getKeySym() == "Left" && event.keyDown())
     {
-      if (CURRENT_POSE_INDEX >= 0 && CURRENT_POSE_INDEX < NUM_POSES)
+      if (CURRENT_POSE_INDEX > 0 && CURRENT_POSE_INDEX < NUM_POSES)
       {
         CURRENT_POSE_INDEX--;
       }

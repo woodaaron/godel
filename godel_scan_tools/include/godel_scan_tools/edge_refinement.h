@@ -3,6 +3,7 @@
     - Add more comments describing what each section of code is doing.
     - Move function implementations to separate cpp file.
     - Check ENSENSO scan density and predict the amount of neighbors.
+    - SPEED THIS UP!!!
 */
 
 #ifndef EDGE_REFINEMENT_H
@@ -541,7 +542,7 @@ public:
 
     std::string display_text;
     display_text = "Current Pose: " + std::to_string(debug_display_data->current_pose_index_);
-    debug_display_data->viewer_->updateText(display_text, 0, 50, "current pose");
+    debug_display_data->viewer_->updateText(display_text, 0, 15, "current pose");
     debug_display_data->viewer_->removeShape("pose point");
     debug_display_data->viewer_->removeShape("new point");
     debug_display_data->viewer_->removePointCloud("nearest N neighbors");
@@ -563,11 +564,11 @@ public:
     debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->refined_boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_2, "N neighbors in plane");
     debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "N neighbors in plane");
     // Boundary Points
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_3(debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), 255, 0, 0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_3(debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), 255, 255, 0);
     debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), single_color_3, "Boundary Points");
-    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Boundary Points");
+    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1.5, "Boundary Points");
     // New Point
-    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 255.0/255.0, 69.0/255.0, 0.0, "new point");    
+    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 0.0, 1.0, 0.0, "new point");    
   }
 
   void
@@ -586,7 +587,7 @@ public:
     viewer->initCameraParameters();
     viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
-    viewer->addText("Current Pose: ", 0, 50, "current pose");
+    viewer->addText("Current Pose: ", 0, 15, "current pose");
 
     DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
                                         boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,

@@ -2,6 +2,7 @@
     TODO:
     - Add more comments describing what each section of code is doing.
     - Move function implementations to separate cpp file.
+    - Check ENSENSO scan density and predict the amount of neighbors.
 */
 
 #ifndef EDGE_REFINEMENT_H
@@ -509,9 +510,7 @@ public:
   static void 
   keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
                         void* debug_display_data_void)
-                        //void* viewer_void)
   {
-    //pcl::visualization::PCLVisualizer *viewer = static_cast<pcl::visualization::PCLVisualizer *> (viewer_void);
     DebugDisplayData *debug_display_data = static_cast<DebugDisplayData *> (debug_display_data_void);
 
     if (event.getKeySym() == "Right" && event.keyDown())
@@ -534,6 +533,10 @@ public:
       std::cout << debug_display_data->current_pose_index_ << std::endl;
     }
 
+    std::string display_text;
+    display_text = "Current Pose: " + std::to_string(debug_display_data->current_pose_index_);
+    debug_display_data->viewer_->addText(display_text, 0, 0, "current pose");
+    debug_display_data->viewer_->updateText(display_text, 0, 0, "current pose");
     debug_display_data->viewer_->removeShape("pose point");
     debug_display_data->viewer_->removeShape("new point");
     debug_display_data->viewer_->removePointCloud("nearest N neighbors");
@@ -583,35 +586,7 @@ public:
                                         boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
                                         neighbor_boundary_points, new_pose_points);
 
-    // viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)viewer.get());
     viewer->registerKeyboardCallback(keyboardEventOccurred, static_cast<void *>(&debug_display_data));
-
-#if 0
-    size_t temp_i = 100;
-    //for (size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      pcl::PointXYZ pose_point;
-      pose_point.x = boundary_poses[temp_i](0, 3);
-      pose_point.y = boundary_poses[temp_i](1, 3);
-      pose_point.z = boundary_poses[temp_i](2, 3);
-      // Pose Point
-      viewer->addSphere(pose_point, 2.5, 1.0, 0.0, 0.0, "pose point");
-      // Points within certain radius or K neighbors
-      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_1(boundary_pose_neighbor[temp_i].makeShared(), 0, 255, 0);
-      viewer->addPointCloud<pcl::PointXYZ> (boundary_pose_neighbor[temp_i].makeShared(), single_color_1, "nearest N neighbors");
-      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "nearest N neighbors");
-      // Points within plane
-      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_2(refined_boundary_pose_neighbor[temp_i].makeShared(), 0, 0, 255);
-      viewer->addPointCloud<pcl::PointXYZ> (refined_boundary_pose_neighbor[temp_i].makeShared(), single_color_2, "N neighbors in plane");
-      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "N neighbors in plane");
-      // Boundary Points
-      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_3(neighbor_boundary_points[temp_i].makeShared(), 255, 0, 0);
-      viewer->addPointCloud<pcl::PointXYZ> (neighbor_boundary_points[temp_i].makeShared(), single_color_3, "Boundary Points");
-      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Boundary Points");
-      // New Point
-      viewer->addSphere(new_pose_points[temp_i], 2.5, 255.0/255.0, 69.0/255.0, 0.0, "new point");
-    }
-#endif
 
     while (!viewer->wasStopped())
     {

@@ -308,6 +308,7 @@ main (int argc, char** av)
   EF.setNumberOfNeighbors(5000);
   EF.setBoundarySearchRadius(5.0);
   EF.setVisualCloud(colored_cloud_ptr);
+  EF.setDebugDisplay(true);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
 
   q = 0;

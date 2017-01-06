@@ -76,6 +76,7 @@ public:
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
     visual_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
     current_pose_index_ = 0;
+    debug_display_ = false;
     getPointDensity();
   }
 
@@ -507,6 +508,11 @@ public:
     return search_radius_;
   }
 
+  void setDebugDisplay(bool debug_display)
+  {
+    if (debug_display) { debug_display_ = true; }
+  }
+
   static void 
   keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
                         void* debug_display_data_void)
@@ -535,8 +541,7 @@ public:
 
     std::string display_text;
     display_text = "Current Pose: " + std::to_string(debug_display_data->current_pose_index_);
-    debug_display_data->viewer_->addText(display_text, 0, 0, "current pose");
-    debug_display_data->viewer_->updateText(display_text, 0, 0, "current pose");
+    debug_display_data->viewer_->updateText(display_text, 0, 50, "current pose");
     debug_display_data->viewer_->removeShape("pose point");
     debug_display_data->viewer_->removeShape("new point");
     debug_display_data->viewer_->removePointCloud("nearest N neighbors");
@@ -581,6 +586,7 @@ public:
     viewer->initCameraParameters();
     viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
+    viewer->addText("Current Pose: ", 0, 50, "current pose");
 
     DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
                                         boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
@@ -670,8 +676,11 @@ public:
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
-    debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
-                 neighbor_boundary_points, neighbor_new_pose_points);
+    if (debug_display_)
+    {
+      debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
+                   neighbor_boundary_points, neighbor_new_pose_points);
+    }
 
     #if 0
     for (size_t i = 0; i < boundary_poses.size(); i++)
@@ -697,6 +706,7 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud_;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_;
 
+  bool debug_display_;
   float point_density_;
   double radius_;
   double sradius_;

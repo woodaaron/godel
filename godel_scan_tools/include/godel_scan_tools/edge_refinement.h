@@ -287,6 +287,7 @@ public:
 
     allowed_deviation = stdev;
 
+    std::cout << allowed_deviation << std::endl;
     return allowed_deviation;
   }
 

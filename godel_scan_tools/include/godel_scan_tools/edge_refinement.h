@@ -287,7 +287,6 @@ public:
 
     allowed_deviation = stdev;
 
-    std::cout << allowed_deviation << std::endl;
     return allowed_deviation;
   }
 
@@ -313,27 +312,15 @@ public:
 
     for (size_t i = 0; i < refined_cloud.size(); i++)
     {
-      pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-      for (const auto &pt : refined_cloud[i].points)
-      {
-        input_cloud->push_back(pt);
-      }
-
       boundaries.clear();
       normals.clear();
-      computeNormals(input_cloud, normals);
-      pcl::PointCloud<pcl::Normal>::Ptr normal_ptr (new pcl::PointCloud<pcl::Normal>);
-
-      for (const auto &n : normals.points)
-      {
-        normal_ptr->push_back(n);
-      }
+      computeNormals(refined_cloud[i].makeShared(), normals);
 
       pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
       pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
 
-      boundary_estimation.setInputCloud(input_cloud);
-      boundary_estimation.setInputNormals(normal_ptr);
+      boundary_estimation.setInputCloud(refined_cloud[i].makeShared());
+      boundary_estimation.setInputNormals(normals.makeShared());
       boundary_estimation.setRadiusSearch(boundary_search_radius);
       boundary_estimation.setSearchMethod(tree);
       boundary_estimation.setAngleThreshold(90.0 * 3.14 / 180.0); // Defaults to PI/2 according to the documentation...

@@ -1,15 +1,7 @@
 /*
     TODO:
     - Add more comments describing what each section of code is doing.
-    [x] Calculate tolerance of a local plane by checking the standard deviation of the deviation 
-      of the nearby points to determine if it is an outlier.
-    - Adjust boundary estimator constant.
-    [?] Set boundary threshold value. (Set the angle threshold for a point to be a normal)
-    [1/2] Define a variable for boundary threshold and comment regarding the physical meaning.
-    - Create a debugging display for updating one pose.
-      - Show original point cloud in one color, the points within a radius in another color,
-        those that fit on the plane in another, the boundary points in another.
-        - Do this display step by step to make sure it is doing exactly what we expect at each step.
+    - Move function implementations to separate cpp file.
 */
 
 #ifndef EDGE_REFINEMENT_H
@@ -25,10 +17,6 @@
 #include <pcl/features/boundary.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
-
-// Yea this is bad but i'm too tired to figure out how to implement this.
-size_t CURRENT_POSE_INDEX = 0;
-size_t NUM_POSES;
 
 namespace godel_scan_tools
 {

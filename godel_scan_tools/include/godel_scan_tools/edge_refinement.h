@@ -527,7 +527,6 @@ public:
         if (debug_display_data->current_pose_index_ == debug_display_data->num_poses_) { debug_display_data->current_pose_index_ = 0; }
         else { debug_display_data->current_pose_index_++; }
       }
-      std::cout << debug_display_data->current_pose_index_ << std::endl;
     }
 
     if (event.getKeySym() == "Left" && event.keyDown())
@@ -537,7 +536,6 @@ public:
         if (debug_display_data->current_pose_index_ == 0) { debug_display_data->current_pose_index_ = debug_display_data->num_poses_; }
         else { debug_display_data->current_pose_index_--; }
       }
-      std::cout << debug_display_data->current_pose_index_ << std::endl;
     }
 
     std::string display_text;
@@ -576,7 +574,8 @@ public:
                const PointCloudVector &boundary_pose_neighbor,
                const PointCloudVector &refined_boundary_pose_neighbor,
                const PointCloudVector &neighbor_boundary_points,
-               const PointVector &new_pose_points)
+               const PointVector &new_pose_points,
+               const EigenPoseMatrix &refined_poses)
   {
     
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
@@ -588,6 +587,22 @@ public:
     viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
     viewer->addText("Current Pose: ", 0, 15, "current pose");
+
+    for (size_t i = 0; i < (boundary_poses.size() - 1); i++)
+    {
+      assert(boundary_poses.size() == refined_poses.size());
+      std::string original_name = "original_line_" + std::to_string(i);
+      std::string refined_name = "refined_line_" + std::to_string(i);
+      pcl::PointXYZ original_p1(boundary_poses[i](0,3), boundary_poses[i](1,3), boundary_poses[i](2,3));
+      pcl::PointXYZ original_p2(boundary_poses[i+1](0,3), boundary_poses[i+1](1,3), boundary_poses[i+1](2,3));
+      pcl::PointXYZ refined_p1(refined_poses[i](0,3), refined_poses[i](1,3), refined_poses[i](2,3));
+      pcl::PointXYZ refined_p2(refined_poses[i+1](0,3), refined_poses[i+1](1,3), refined_poses[i+1](2,3));
+
+      viewer->addLine<pcl::PointXYZ>(original_p1, original_p2, original_name);
+      viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, original_name);
+      viewer->addLine<pcl::PointXYZ>(refined_p1, refined_p2, refined_name);
+      viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, 0.0, 1.0, 0.0, refined_name);
+    }
 
     DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
                                         boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
@@ -680,7 +695,7 @@ public:
     if (debug_display_)
     {
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
-                   neighbor_boundary_points, neighbor_new_pose_points);
+                   neighbor_boundary_points, neighbor_new_pose_points, refined_poses);
     }
 
     #if 0

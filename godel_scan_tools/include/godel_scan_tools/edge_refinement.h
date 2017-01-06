@@ -46,11 +46,29 @@ struct DebugDisplayData
   size_t num_poses_;
   pcl::visualization::PCLVisualizer *viewer_;
 
-  DebugDisplayData(size_t current_pose_index, size_t num_poses, pcl::visualization::PCLVisualizer *viewer)
+  EigenPoseMatrix boundary_poses_;
+  PointCloudVector boundary_pose_neighbor_;
+  PointCloudVector refined_boundary_pose_neighbor_;
+  PointCloudVector neighbor_boundary_points_;
+  PointVector new_pose_points_;
+
+  DebugDisplayData(const size_t current_pose_index, const size_t num_poses, 
+                   pcl::visualization::PCLVisualizer *viewer,
+                   const EigenPoseMatrix boundary_poses, 
+                   const PointCloudVector boundary_pose_neighbor, 
+                   const PointCloudVector refined_boundary_pose_neighbor, 
+                   const PointCloudVector neighbor_boundary_points,
+                   const PointVector new_pose_points)
   {
     current_pose_index_ = current_pose_index;
     num_poses_ = num_poses;
     viewer_ = viewer;
+
+    boundary_poses_ = boundary_poses;
+    boundary_pose_neighbor_ = boundary_pose_neighbor;
+    refined_boundary_pose_neighbor_ = refined_boundary_pose_neighbor;
+    neighbor_boundary_points_ = neighbor_boundary_points;
+    new_pose_points_ = new_pose_points;
   }
 };
 
@@ -505,12 +523,8 @@ public:
                         void* debug_display_data_void)
                         //void* viewer_void)
   {
-    // temp
-    // size_t current_pose_index = 0;
-    // size_t num_poses = 1;
-    // temp
-    DebugDisplayData *debug_display_data = static_cast<DebugDisplayData *> (debug_display_data_void);
     //pcl::visualization::PCLVisualizer *viewer = static_cast<pcl::visualization::PCLVisualizer *> (viewer_void);
+    DebugDisplayData *debug_display_data = static_cast<DebugDisplayData *> (debug_display_data_void);
 
     if (event.getKeySym() == "Right" && event.keyDown())
     {
@@ -531,16 +545,41 @@ public:
       }
       std::cout << debug_display_data->current_pose_index_ << std::endl;
     }
+
+    debug_display_data->viewer_->removeShape("pose point");
+    debug_display_data->viewer_->removeShape("new point");
+    debug_display_data->viewer_->removePointCloud("nearest N neighbors");
+    debug_display_data->viewer_->removePointCloud("N neighbors in plane");
+    debug_display_data->viewer_->removePointCloud("Boundary Points");
+
+    pcl::PointXYZ pose_point;
+    pose_point.x = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](0, 3);
+    pose_point.y = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](1, 3);
+    pose_point.z = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](2, 3);
+    // Pose Point
+    debug_display_data->viewer_->addSphere(pose_point, 2.5, 1.0, 0.0, 0.0, "pose point");
+    // Points within certain radius or K neighbors
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_1(debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), 0, 255, 0);
+    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_1, "nearest N neighbors");
+    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "nearest N neighbors");
+    // Points within plane
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_2(debug_display_data->refined_boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), 0, 0, 255);
+    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->refined_boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_2, "N neighbors in plane");
+    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "N neighbors in plane");
+    // Boundary Points
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_3(debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), 255, 0, 0);
+    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), single_color_3, "Boundary Points");
+    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Boundary Points");
+    // New Point
+    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 255.0/255.0, 69.0/255.0, 0.0, "new point");    
   }
 
   void
   debugDisplay(const EigenPoseMatrix &boundary_poses,
                const PointCloudVector &boundary_pose_neighbor,
                const PointCloudVector &refined_boundary_pose_neighbor,
-               const PointCloudBoundaryVector &neighbor_boundary,
                const PointCloudVector &neighbor_boundary_points,
-               const PointVector &new_pose_points,
-               const EigenPoseMatrix &refined_poses)
+               const PointVector &new_pose_points)
   {
     
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
@@ -552,11 +591,14 @@ public:
     viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
 
-    DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get());
+    DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
+                                        boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
+                                        neighbor_boundary_points, new_pose_points);
 
     // viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)viewer.get());
     viewer->registerKeyboardCallback(keyboardEventOccurred, static_cast<void *>(&debug_display_data));
 
+#if 0
     size_t temp_i = 100;
     //for (size_t i = 0; i < boundary_poses.size(); i++)
     {
@@ -581,6 +623,7 @@ public:
       // New Point
       viewer->addSphere(new_pose_points[temp_i], 2.5, 255.0/255.0, 69.0/255.0, 0.0, "new point");
     }
+#endif
 
     while (!viewer->wasStopped())
     {
@@ -665,7 +708,7 @@ public:
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
     debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
-                 neighbor_boundary, neighbor_boundary_points, neighbor_new_pose_points, refined_poses);
+                 neighbor_boundary_points, neighbor_new_pose_points);
 
     #if 0
     for (size_t i = 0; i < boundary_poses.size(); i++)

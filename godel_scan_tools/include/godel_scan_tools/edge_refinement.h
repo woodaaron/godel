@@ -623,7 +623,7 @@ public:
     EigenPoseMatrix boundary_poses;
     boundary_poses.reserve(original_boundary_poses.size());
     removeNaNFromPoseTrajectory(original_boundary_poses, boundary_poses);
-    num_poses_ = boundary_poses.size();
+    num_poses_ = boundary_poses.size() - 1;
 
     // 1) Find all points within R1 of each boundary pose.
     PointCloudVector boundary_pose_radius;

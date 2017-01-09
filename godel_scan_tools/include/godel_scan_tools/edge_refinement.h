@@ -32,8 +32,8 @@ typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
 
 struct DebugDisplayData
 {
-  size_t current_pose_index_;
-  size_t num_poses_;
+  std::size_t current_pose_index_;
+  std::size_t num_poses_;
   pcl::visualization::PCLVisualizer *viewer_;
 
   EigenPoseMatrix boundary_poses_;
@@ -42,7 +42,7 @@ struct DebugDisplayData
   PointCloudVector neighbor_boundary_points_;
   PointVector new_pose_points_;
 
-  DebugDisplayData(const size_t current_pose_index, const size_t num_poses, 
+  DebugDisplayData(const std::size_t current_pose_index, const std::size_t num_poses, 
                    pcl::visualization::PCLVisualizer *viewer,
                    const EigenPoseMatrix boundary_poses, 
                    const PointCloudVector boundary_pose_neighbor, 
@@ -139,7 +139,7 @@ public:
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(input_cloud);
 
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::vector<int> pointIdxRadiusSearch;
       std::vector<float> pointRadiusSquaredDistance;
@@ -152,7 +152,7 @@ public:
       pcl::PointCloud<pcl::PointXYZ> temp_cloud;
       if (kdtree.radiusSearch(searchpoint, search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
       {
-        for (size_t j = 0; j < pointIdxRadiusSearch.size(); j++)
+        for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); j++)
         {
           temp_cloud.push_back(input_cloud->points[pointIdxRadiusSearch[j]]);
         }
@@ -171,7 +171,7 @@ public:
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(input_cloud);
 
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::vector<int> pointIdxNKNSearch(n);
       std::vector<float> pointNKNSquaredDistance(n);
@@ -184,7 +184,7 @@ public:
       pcl::PointCloud<pcl::PointXYZ> temp_cloud;
       if (kdtree.nearestKSearch(searchpoint, n, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
       {
-        for (size_t j = 0; j < pointIdxNKNSearch.size(); j++)
+        for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
         {
           temp_cloud.push_back(input_cloud->points[pointIdxNKNSearch[j]]);
         }
@@ -215,7 +215,7 @@ public:
                        const PointCloudVector &boundary_pose_neighbor,
                        PointCloudVector &refined_boundary_pose_neighbor)
   {
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     { 
       NormalVector normal;
       PoseOrigin pose_origin;
@@ -238,7 +238,7 @@ public:
       float dot_product = pose_origin.dot(normal);
 
       // Calcualtes the deviation of the nearby points from the plane.
-      for (size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
+      for (std::size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
       {
         float x = boundary_pose_neighbor[i].points[j].x;
         float y = boundary_pose_neighbor[i].points[j].y;
@@ -252,7 +252,7 @@ public:
 
       pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
-      for (size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
+      for (std::size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
       {
         float x = boundary_pose_neighbor[i].points[j].x;
         float y = boundary_pose_neighbor[i].points[j].y;
@@ -310,7 +310,7 @@ public:
     pcl::PointCloud<pcl::Boundary> boundaries;
     pcl::PointCloud<pcl::Normal> normals;
 
-    for (size_t i = 0; i < refined_cloud.size(); i++)
+    for (std::size_t i = 0; i < refined_cloud.size(); i++)
     {
       boundaries.clear();
       normals.clear();
@@ -339,7 +339,7 @@ public:
 
     pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
-    for (size_t i = 0; i < refined_points_cloud.size(); i++)
+    for (std::size_t i = 0; i < refined_points_cloud.size(); i++)
     {
       temp_cloud.clear();
       int k = 0;
@@ -360,9 +360,9 @@ public:
   static bool
   containsNaNs(Eigen::Matrix4f matrix)
   {
-    for (size_t i = 0; i < 4; i++)
+    for (std::size_t i = 0; i < 4; i++)
     {
-      for (size_t j = 0; j < 4; j++)
+      for (std::size_t j = 0; j < 4; j++)
       {
         if (std::isnan(matrix(i, j))) { return true; }
         else { return false; }
@@ -374,7 +374,7 @@ public:
   removeNaNFromPoseTrajectory(const EigenPoseMatrix &original_boundary_poses,
                               EigenPoseMatrix &boundary_poses_no_nan)
   {
-    for (size_t i = 0; i < original_boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < original_boundary_poses.size(); i++)
     {
       if (!containsNaNs(original_boundary_poses[i]))
       {
@@ -395,7 +395,7 @@ public:
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
 
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       kdtree.setInputCloud(extracted_boundary_points[i].makeShared());
 
@@ -407,7 +407,7 @@ public:
 
       if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
       {
-        for (size_t j = 0; j < pointIdxNKNSearch.size(); j++)
+        for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
         {
           temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].x;
           temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].y;
@@ -427,7 +427,7 @@ public:
     assert(boundary_poses.size() == radius_new_boundary_points.size());
     assert(boundary_poses.size() == neighbor_new_boundary_points.size());
 
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::cout << "Old Boundary Point: " << "x: " << boundary_poses[i](0, 3) 
                 << ", y: " << boundary_poses[i](1, 3) << ", z: " 
@@ -450,7 +450,7 @@ public:
   {
     Eigen::Matrix4f temp_pose;
 
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       temp_pose = boundary_poses[i];
       temp_pose(0, 3) = new_boundary_points[i].x;
@@ -576,7 +576,7 @@ public:
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
     viewer->addText("Current Pose: ", 0, 15, "current pose");
 
-    for (size_t i = 0; i < (boundary_poses.size() - 1); i++)
+    for (std::size_t i = 0; i < (boundary_poses.size() - 1); i++)
     {
       assert(boundary_poses.size() == refined_poses.size());
       std::string original_name = "original_line_" + std::to_string(i);
@@ -680,6 +680,11 @@ public:
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
+    for (std::size_t i = 0; i < neighbor_new_pose_points.size(); i++)
+    {
+
+    }
+
     if (debug_display_)
     {
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
@@ -687,7 +692,7 @@ public:
     }
 
     #if 0
-    for (size_t i = 0; i < boundary_poses.size(); i++)
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::cout << std::endl << "Boundary Pose Number: " << i << std::endl;
 
@@ -721,8 +726,8 @@ private:
   int number_of_neighbors_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr visual_cloud_;
 
-  size_t current_pose_index_;
-  size_t num_poses_;
+  std::size_t current_pose_index_;
+  std::size_t num_poses_;
 };
 } // namespace godel_scan_tools
 #endif // EDGE_REFINEMENT_H

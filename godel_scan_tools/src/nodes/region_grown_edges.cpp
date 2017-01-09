@@ -329,7 +329,7 @@ main (int argc, char** av)
 
 #if 1
   // for(int j=0; j<refined_pose_trajectory.size()-1; j++)
-  for(int j=0; j<refined_pose_trajectory.size(); j++) // Removing -1 fixes this segfault.
+  for(int j=0; j<refined_pose_trajectory.size() - 1; j++) // Removing -1 fixes this segfault.
   {
     char line_number[255];
     sprintf(line_number,"%03d",q++);

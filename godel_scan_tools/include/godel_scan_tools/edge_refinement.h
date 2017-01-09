@@ -9,7 +9,7 @@
 #ifndef EDGE_REFINEMENT_H
 #define EDGE_REFINEMENT_H
 
-#include <functional>
+#include <math.h>
 #include <pcl/common/common.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
@@ -616,6 +616,81 @@ public:
     }
   }
 
+  /*
+      The returned index is the first index of the jump. So if the index is 100, the large jump is
+      between poses 100 and 101.
+  */
+
+  static float
+  distanceBetweenTwoPoints(const PointVector &point_vector,
+                           const int index_1,
+                           const int index_2)
+  {
+    float diff_x = point_vector[index_1].x - point_vector[index_2].x;
+    float diff_y = point_vector[index_1].y - point_vector[index_2].y;
+    float diff_z = point_vector[index_1].z - point_vector[index_2].z;
+
+    float magnitude = sqrt(diff_x*diff_x + diff_y*diff_y + diff_z*diff_z);
+
+    return magnitude;
+  }
+
+  static int
+  calculateNumberOfPointsToInsert(float &distance_between_points,
+                                  float &standard_deviation)
+  {
+    int number_of_points = round(distance_between_points / standard_deviation);
+    return number_of_points - 2; // -2 because of the original two points.
+  }
+
+  static void
+  calculateOutliersInNewPosePoints(const PointVector &neighbor_new_pose_points,
+                                   std::map<int, int> &pose_index)
+  {
+    std::vector<float> difference_between_poses;
+    for (std::size_t i = 1; i < neighbor_new_pose_points.size(); i++)
+    {
+      float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, i, i-1);
+     
+      if (magnitude != 0.0)
+      {
+        difference_between_poses.push_back(magnitude);
+      }
+    }
+
+    float sum = std::accumulate(difference_between_poses.begin(), difference_between_poses.end(), 0.0);
+    float mean = sum / difference_between_poses.size();
+    float standard_deviation = calculateAllowedDeviation(difference_between_poses);
+
+    std::cout << "Mean: " << mean << std::endl;
+    std::cout << "Deviation: " << standard_deviation << std::endl;
+    std::cout << "Max Deviation: " << maxValueOfVector(difference_between_poses) << std::endl;
+
+    for (std::size_t i = 1; i < neighbor_new_pose_points.size(); i++)
+    {
+      float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, i, i-1);
+
+      if ((magnitude-4*standard_deviation) >= mean)
+      {
+        std::cout << "Pose: " << (i-1) << " - " << i << " : " << magnitude << std::endl;
+        pose_index[i-1] = calculateNumberOfPointsToInsert(magnitude, standard_deviation);
+        //pose_index.push_back(i-1);
+      } 
+    }
+
+    // Debug check
+    for (std::map<int, int>::const_iterator it = pose_index.begin(); it != pose_index.end(); it++)
+    {
+      std::cout << "Pose: " << it->first << " requires " << it->second << " points." << std::endl;
+    }
+    // for (std::size_t i = 0; i < pose_index.size(); i++)
+    // {
+    //   float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, pose_index[i]+1, pose_index[i]);
+    //   std::cout << "Pose: " << pose_index[i] << " requires " 
+    //             << calculateNumberOfPointsToInsert(magnitude, standard_deviation) << " points." << std::endl;
+    // }
+  }
+
   void 
   refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
                  EigenPoseMatrix &refined_poses)
@@ -676,14 +751,13 @@ public:
     // calculateClosestPointInBoundaryToPose(boundary_poses, radius_boundary_points, radius_new_pose_points);
     calculateClosestPointInBoundaryToPose(boundary_poses, neighbor_boundary_points, neighbor_new_pose_points);
 
-    // 5) Move original boundary pose point to new point while keeping same orientation
+    // 5) Find any outliers in the new pose points (new points that jump too far).
+    std::map<int, int> outlier_index; // Pose Number, Number of Points to Add
+    calculateOutliersInNewPosePoints(neighbor_new_pose_points, outlier_index);
+
+    // 6) Move original boundary pose point to new point while keeping same orientation
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
-
-    for (std::size_t i = 0; i < neighbor_new_pose_points.size(); i++)
-    {
-
-    }
 
     if (debug_display_)
     {
@@ -709,6 +783,19 @@ public:
       std::cout << std::endl;        
     }
     #endif
+  }
+
+  static float maxValueOfVector(std::vector<float> &vec)
+  {
+    float max_value = 0;
+    for (std::size_t i = 0; i < vec.size(); i++)
+    {
+      if (vec[i] > max_value)
+      {
+        max_value = vec[i];
+      }
+    }
+    return max_value;
   }
 
 private:

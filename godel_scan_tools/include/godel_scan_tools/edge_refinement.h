@@ -687,8 +687,9 @@ public:
   static PointVector
   calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
                                           const PointVector &neighbor_new_pose_points, 
-                                          const int &index)
+                                          const int index)
   {
+    // The problem is somewhere in this function.
     int K = 1;
     int pose_index;
     int closest_pose_index;
@@ -698,9 +699,14 @@ public:
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
 
-    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    pcl::PointXYZ searchpoint = neighbor_new_pose_points[index];
+    if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
-      pose_index = pointIdxNKNSearch[0];
+      //for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
+      {
+        pose_index = pointIdxNKNSearch[0];
+        std::cout << "Pose Index: " << pose_index << std::endl;
+      }
     }
 
     pointIdxNKNSearch.clear();
@@ -763,7 +769,9 @@ public:
   {
     for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
     {
-      calculateClosestBoundaryPointToNextPose(boundary_points, neighbor_new_pose_points, it->first);
+      int index = it->first;
+      std::cout << "Index #: " << index << std::endl;
+      calculateClosestBoundaryPointToNextPose(boundary_points, neighbor_new_pose_points, index);
     }
   }
 

@@ -670,7 +670,7 @@ public:
     {
       float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, i, i-1);
 
-      if ((magnitude-4*standard_deviation) >= mean)
+      if ((magnitude-3*standard_deviation) >= mean)
       {
         std::cout << "Pose: " << (i-1) << " - " << i << " : " << magnitude << std::endl;
         outlier_index[i-1] = calculateNumberOfPointsToInsert(magnitude, standard_deviation);
@@ -690,13 +690,28 @@ public:
                                           const int &index)
   {
     int K = 1;
+    int pose_index;
+    int closest_pose_index;
+
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(boundary_points[index].makeShared());
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
-    int pose_index;
-    int closest_pose_index;
 
+    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    {
+      pose_index = pointIdxNKNSearch[0];
+    }
+
+    pointIdxNKNSearch.clear();
+    pointNKNSquaredDistance.clear();
+/*
+    if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    {
+      closest_pose_index = pointIdxNKNSearch[0];
+    }
+*/    
+/*
     if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
       for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
@@ -712,6 +727,9 @@ public:
       }
     }
 
+    pointIdxNKNSearch.clear();
+    pointNKNSquaredDistance.clear();
+
     if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
       for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
@@ -726,15 +744,15 @@ public:
         closest_pose_index = pointIdxNKNSearch[i];
       }
     }
+*/
 
-    if (pose_index == 0 && closest_pose_index > 0)
+    //if (pose_index == 0 && closest_pose_index > 0)
     {
       //if ((closest_pose_index - pose_index) > boundary_points[index].width / 2)
       {
         std::cout << "true" << std::endl;
       }
     }
-
   }
 
   static void

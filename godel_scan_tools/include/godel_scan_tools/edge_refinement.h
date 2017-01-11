@@ -41,6 +41,7 @@ struct DebugDisplayData
   PointCloudVector refined_boundary_pose_neighbor_;
   PointCloudVector neighbor_boundary_points_;
   PointVector new_pose_points_;
+  std::map<int, PointVector> additional_poses_;
 
   DebugDisplayData(const std::size_t current_pose_index, const std::size_t num_poses, 
                    pcl::visualization::PCLVisualizer *viewer,
@@ -48,7 +49,8 @@ struct DebugDisplayData
                    const PointCloudVector boundary_pose_neighbor, 
                    const PointCloudVector refined_boundary_pose_neighbor, 
                    const PointCloudVector neighbor_boundary_points,
-                   const PointVector new_pose_points)
+                   const PointVector new_pose_points,
+                   const std::map<int, PointVector> additional_poses)
   {
     current_pose_index_ = current_pose_index;
     num_poses_ = num_poses;
@@ -59,6 +61,7 @@ struct DebugDisplayData
     refined_boundary_pose_neighbor_ = refined_boundary_pose_neighbor;
     neighbor_boundary_points_ = neighbor_boundary_points;
     new_pose_points_ = new_pose_points;
+    additional_poses_ = additional_poses;
   }
 };
 
@@ -535,6 +538,7 @@ public:
     debug_display_data->viewer_->removePointCloud("N neighbors in plane");
     debug_display_data->viewer_->removePointCloud("Boundary Points");
 
+          
     pcl::PointXYZ pose_point;
     pose_point.x = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](0, 3);
     pose_point.y = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](1, 3);
@@ -554,7 +558,20 @@ public:
     debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), single_color_3, "Boundary Points");
     debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1.5, "Boundary Points");
     // New Point
-    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 0.0, 1.0, 0.0, "new point");    
+    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 0.0, 1.0, 0.0, "new point");
+
+    for (std::map<int, PointVector>::const_iterator it = debug_display_data->additional_poses_.begin();
+         it != debug_display_data->additional_poses_.end(); it++)
+    {  
+      if (it->first == debug_display_data->current_pose_index_ || (it->first + it->second.size()) == debug_display_data->current_pose_index_)
+      {
+        for (std::size_t i = 0; i < it->second.size(); i++)
+        {
+          std::string additional_name = "additional_pose_" + std::to_string(i);
+          debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
+        }
+      }
+    }
   }
 
   void
@@ -563,7 +580,8 @@ public:
                const PointCloudVector &refined_boundary_pose_neighbor,
                const PointCloudVector &neighbor_boundary_points,
                const PointVector &new_pose_points,
-               const EigenPoseMatrix &refined_poses)
+               const EigenPoseMatrix &refined_poses,
+               const std::map<int, PointVector> &additional_poses)
   {
     
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
@@ -594,7 +612,7 @@ public:
 
     DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
                                         boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
-                                        neighbor_boundary_points, new_pose_points);
+                                        neighbor_boundary_points, new_pose_points, additional_poses);
 
     viewer->registerKeyboardCallback(keyboardEventOccurred, static_cast<void *>(&debug_display_data));
 
@@ -873,7 +891,7 @@ public:
     if (debug_display_)
     {
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
-                   neighbor_boundary_points, neighbor_new_pose_points, refined_poses);
+                   neighbor_boundary_points, neighbor_new_pose_points, refined_poses, additional_poses);
     }
 
     #if 0

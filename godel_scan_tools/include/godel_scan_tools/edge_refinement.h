@@ -576,7 +576,7 @@ public:
     for (std::map<int, PointVector>::const_iterator it = debug_display_data->additional_poses_.begin();
          it != debug_display_data->additional_poses_.end(); it++)
     {  
-      if (it->first == debug_display_data->current_pose_index_ || (it->first + it->second.size()) == debug_display_data->current_pose_index_)
+      if (it->first == debug_display_data->current_pose_index_ || (it->first + 1) == debug_display_data->current_pose_index_)
       {
         for (std::size_t i = 0; i < it->second.size(); i++)
         {
@@ -733,8 +733,7 @@ public:
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
 
-    pcl::PointXYZ searchpoint = neighbor_new_pose_points[index];
-    if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
       {
         pose_index = pointIdxNKNSearch[0];

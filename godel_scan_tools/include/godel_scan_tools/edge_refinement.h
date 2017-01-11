@@ -315,13 +315,44 @@ public:
                                  PointCloudBoundaryVector &refined_boundary,
                                  const float boundary_search_radius)
   {
-    pcl::PointCloud<pcl::Boundary> boundaries;
-    pcl::PointCloud<pcl::Normal> normals;
 
+#if 1
+    refined_boundary.resize(refined_cloud.size());
+    #pragma omp parallel for
     for (std::size_t i = 0; i < refined_cloud.size(); i++)
     {
+      pcl::PointCloud<pcl::Boundary> boundaries;
+      pcl::PointCloud<pcl::Normal> normals;
+      
+      /*
       boundaries.clear();
       normals.clear();
+      */
+
+      computeNormals(refined_cloud[i].makeShared(), normals);
+
+      pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
+      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
+      boundary_estimation.setInputCloud(refined_cloud[i].makeShared());
+      boundary_estimation.setInputNormals(normals.makeShared());
+      boundary_estimation.setRadiusSearch(boundary_search_radius);
+      boundary_estimation.setSearchMethod(tree);
+      boundary_estimation.setAngleThreshold(90.0 * 3.14 / 180.0); // Defaults to PI/2 according to the documentation...
+      boundary_estimation.compute(boundaries);
+
+      refined_boundary[i] = boundaries;
+    }
+#endif
+    
+#if 0
+    refined_boundary.reserve(refined_cloud.size());
+    for (std::size_t i = 0; i < refined_cloud.size(); i++)
+    {
+      pcl::PointCloud<pcl::Boundary> boundaries;
+      pcl::PointCloud<pcl::Normal> normals;
+      // boundaries.clear();
+      // normals.clear();
       computeNormals(refined_cloud[i].makeShared(), normals);
 
       pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
@@ -336,6 +367,7 @@ public:
 
       refined_boundary.push_back(boundaries);
     }
+#endif
   }
 
   static bool

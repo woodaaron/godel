@@ -15,7 +15,21 @@ ENDIF(EIGEN3_FOUND)
    cmake_modules
    pcl_ros
 )
+
 find_package(Boost REQUIRED COMPONENTS system)
+
+# OpenMP
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+  message(STATUS "OPENMP FOUND")
+  set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})  # or if you use C: ${OpenMP_C_FLAGS}
+  set(OpenMP_LIBS gomp)
+endif()
+
+catkin_package(
+  DEPENDS
+    OpenMP
+)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -112,7 +126,10 @@ add_definitions(${PCL_DEFINITIONS})
 # )
 
 ## Declare a cpp executable
- add_executable(region_grown_edges src/nodes/region_grown_edges.cpp)
+add_executable(region_grown_edges src/nodes/region_grown_edges.cpp)
+target_compile_options(region_grown_edges PRIVATE ${OpenMP_FLAGS})
+add_dependencies(region_grown_edges ${catkin_EXPORTED_TARGETS})
+
 #add_executable(bs_test test/godel_scan_tools_test.cpp )
 target_link_libraries(region_grown_edges
    ${catkin_LIBRARIES}
@@ -121,6 +138,7 @@ target_link_libraries(region_grown_edges
    #"/usr/lib/libvtkFiltering.so.5.10.1"
    #"/usr/lib/libvtkCommon.so.5.10.1"
    ${PCL_LIBRARIES}
+   ${OpenMP_LIBS}
 )
 
 

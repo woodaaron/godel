@@ -772,7 +772,7 @@ public:
   }
 
   static void
-  iCantThinkOfANameForThisYet(const PointCloudVector &boundary_points, 
+  calculateAdditionalPosesRequiredToFillGaps(const PointCloudVector &boundary_points, 
                               const PointVector &neighbor_new_pose_points, 
                               const std::map<int, int> &outlier_index,
                               std::map<int, PointVector> &additional_poses)
@@ -864,7 +864,7 @@ public:
 
     // 6) Determines the boundary points that follow the shortest distance between the poses of the two outliers.
     std::map<int, PointVector> additional_poses;
-    iCantThinkOfANameForThisYet(neighbor_boundary_points, neighbor_new_pose_points, outlier_index, additional_poses);
+    calculateAdditionalPosesRequiredToFillGaps(neighbor_boundary_points, neighbor_new_pose_points, outlier_index, additional_poses);
 
     // 7) Move original boundary pose point to new point while keeping same orientation
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);

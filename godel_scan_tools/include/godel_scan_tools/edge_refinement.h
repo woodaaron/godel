@@ -409,10 +409,41 @@ public:
     #endif
 
     // Safe Method
-    #if 0
+    #if 1
+    int K = 2;
+    std::size_t i = 0;
+    pcl::PointXYZ searchpoint = point_cloud.points[i];
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+    ordered_point_cloud.push_back(searchpoint);
+
+    while (i < (unordered_point_cloud.size() - 1))
+    {
+      kdtree.setInputCloud(unordered_point_cloud.makeShared());
+      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+      {
+        unordered_point_cloud.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
+        searchpoint = unordered_point_cloud[1];
+        ordered_point_cloud.push_back(searchpoint);
+        i++;
+      }
+    }
     #endif
 
     //if (point_cloud.size() == ordered_point_cloud.size()) { std::cout << "The clouds are the same size!" << std::endl; }
+    // std::cout << "Original Boundary Cloud " << "New Boundary Cloud" << std::endl;
+    // for (std::size_t i = 0; i < point_cloud.size(); i++)
+    // {
+    //   std::cout << point_cloud.points[i] << " : " << ordered_point_cloud.points[i] << std::endl;
+    // }
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
+    viewer->setBackgroundColor (0, 0, 0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
+    viewer->addPointCloud<pcl::PointXYZRGB> (point_cloud.makeShared(), unordered, "unordered cloud");
+    viewer->addPointCloud<pcl::PointXYZRGB> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
     return ordered_point_cloud;
   }
 

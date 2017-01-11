@@ -689,7 +689,6 @@ public:
                                           const PointVector &neighbor_new_pose_points, 
                                           const int index)
   {
-    // The problem is somewhere in this function.
     int K = 1;
     int pose_index;
     int closest_pose_index;
@@ -702,61 +701,29 @@ public:
     pcl::PointXYZ searchpoint = neighbor_new_pose_points[index];
     if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
-      //for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
       {
         pose_index = pointIdxNKNSearch[0];
         std::cout << "Pose Index: " << pose_index << std::endl;
       }
     }
 
-    pointIdxNKNSearch.clear();
-    pointNKNSquaredDistance.clear();
-/*
     if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
       closest_pose_index = pointIdxNKNSearch[0];
+      std::cout << "Closest Pose Index: " << closest_pose_index << std::endl;
     }
-*/    
-/*
-    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    
+    if (pose_index == 0 && closest_pose_index > 0)
     {
-      for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
+      if ((closest_pose_index - pose_index) < boundary_points[index].width / 2)
       {
-        #if 0
-        std::cout << "Pose Point: " << std::endl;
-        std::cout << boundary_points[index].points[pointIdxNKNSearch[i]] << std::endl;
-        std::cout << neighbor_new_pose_points[index] << std::endl;
-        std::cout << "Index In Boundary: " << pointIdxNKNSearch[i] << std::endl;
-        #endif
-        //closest_point = boundary_points[index].points[pointIdxNKNSearch[i]];
-        pose_index = pointIdxNKNSearch[i];      
+        std::cout << "The closest way to get to closest_pose_index is to add" << std::endl;
+
       }
-    }
-
-    pointIdxNKNSearch.clear();
-    pointNKNSquaredDistance.clear();
-
-    if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-    {
-      for (size_t i = 0; i < pointIdxNKNSearch.size(); i++)
+      else
       {
-        #if 0
-        std::cout << "Nearest Pose Point: " << std::endl;
-        std::cout << boundary_points[index].points[pointIdxNKNSearch[i]] << std::endl;
-        std::cout << neighbor_new_pose_points[index+1] << std::endl;
-        std::cout << "Index In Boundary: " << pointIdxNKNSearch[i] << std::endl;
-        #endif
-        //closest_point = boundary_points[index].points[pointIdxNKNSearch[i]];
-        closest_pose_index = pointIdxNKNSearch[i];
-      }
-    }
-*/
-
-    //if (pose_index == 0 && closest_pose_index > 0)
-    {
-      //if ((closest_pose_index - pose_index) > boundary_points[index].width / 2)
-      {
-        std::cout << "true" << std::endl;
+        std::cout << "The closest way to get to the closest_pose_index is to subtract" << std::endl;
+        
       }
     }
   }
@@ -764,14 +731,24 @@ public:
   static void
   iCantThinkOfANameForThisYet(const PointCloudVector &boundary_points, 
                               const PointVector &neighbor_new_pose_points, 
-                              const std::map<int, int> &outlier_index)//,
-                              //std::map<int, PointVector> &additional_poses)
+                              const std::map<int, int> &outlier_index,
+                              std::map<int, PointVector> &additional_poses)
   {
     for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
     {
       int index = it->first;
       std::cout << "Index #: " << index << std::endl;
-      calculateClosestBoundaryPointToNextPose(boundary_points, neighbor_new_pose_points, index);
+      additional_poses[it->first] = calculateClosestBoundaryPointToNextPose(boundary_points, neighbor_new_pose_points, index);
+    }
+
+    // Debug check
+    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
+    {
+      std::cout << "Pose: " << it->first << " requires the following additional points:" << std::endl;
+      for (std::size_t i = 0; i < it->second.size(); i++)
+      {
+        std::cout << it->second[i] << std::endl;
+      }
     }
   }
 
@@ -841,8 +818,8 @@ public:
     calculateOutliersInNewPosePoints(neighbor_new_pose_points, outlier_index);
 
     // 6) Determines the boundary points that follow the shortest distance between the poses of the two outliers.
-    //std::map<int, PointVector> additional_poses;
-    iCantThinkOfANameForThisYet(neighbor_boundary_points, neighbor_new_pose_points, outlier_index);//, additional_poses);
+    std::map<int, PointVector> additional_poses;
+    iCantThinkOfANameForThisYet(neighbor_boundary_points, neighbor_new_pose_points, outlier_index, additional_poses);
 
     // 7) Move original boundary pose point to new point while keeping same orientation
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);

@@ -32,6 +32,8 @@ typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
 
 struct DebugDisplayData
 {
+  bool rendered_additional_shapes_;
+  std::size_t rendered_shape_count_;
   std::size_t current_pose_index_;
   std::size_t num_poses_;
   pcl::visualization::PCLVisualizer *viewer_;
@@ -62,6 +64,8 @@ struct DebugDisplayData
     neighbor_boundary_points_ = neighbor_boundary_points;
     new_pose_points_ = new_pose_points;
     additional_poses_ = additional_poses;
+    rendered_additional_shapes_ = 0;
+    rendered_shape_count_ = 0;
   }
 };
 
@@ -538,6 +542,15 @@ public:
     debug_display_data->viewer_->removePointCloud("N neighbors in plane");
     debug_display_data->viewer_->removePointCloud("Boundary Points");
 
+    if (debug_display_data->rendered_additional_shapes_ == true)
+    {
+      for (std::size_t i = 0; i < debug_display_data->rendered_shape_count_; i++)
+      {
+        std::string additional_name = "additional_pose_" + std::to_string(i);
+        debug_display_data->viewer_->removeShape(additional_name);
+      }
+      debug_display_data->rendered_additional_shapes_ = false;
+    }
           
     pcl::PointXYZ pose_point;
     pose_point.x = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](0, 3);
@@ -570,6 +583,8 @@ public:
           std::string additional_name = "additional_pose_" + std::to_string(i);
           debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
         }
+        debug_display_data->rendered_shape_count_ = it->second.size();
+        debug_display_data->rendered_additional_shapes_ = true;
       }
     }
   }

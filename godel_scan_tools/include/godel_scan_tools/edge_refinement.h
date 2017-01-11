@@ -4,6 +4,9 @@
     - Move function implementations to separate cpp file.
     - Check ENSENSO scan density and predict the amount of neighbors.
     - SPEED THIS UP!!!
+    - Add B-Spline Smoother:
+      http://stackoverflow.com/questions/25379422/b-spline-curves
+      http://kluge.in-chemnitz.de/opensource/spline/ 
 */
 
 #ifndef EDGE_REFINEMENT_H
@@ -278,7 +281,6 @@ public:
   }
 
   // Calcualtes standard deviation of the deviations.
-  // http://stackoverflow.com/questions/7616511/calculate-mean-and-standard-deviation-from-a-vector-of-samples-in-c-using-boos
   static float 
   calculateAllowedDeviation(const std::vector<float> &deviations)
   {
@@ -337,6 +339,83 @@ public:
     }
   }
 
+  static bool
+  checkIfPointsAreEqual(const pcl::PointXYZ &point_a, const pcl::PointXYZ &point_b)
+  {
+    if (point_a.x == point_b.x && point_a.y == point_b.y && point_a.z == point_b.z)
+    {
+      return true;
+    }
+    else { return false; }
+  }
+
+  // This only works for things that go in a circle.
+  static pcl::PointCloud<pcl::PointXYZ>
+  defineOrderForPointCloud(const pcl::PointCloud<pcl::PointXYZ> &point_cloud)
+  {
+    pcl::PointCloud<pcl::PointXYZ> unordered_point_cloud;
+    unordered_point_cloud.reserve(point_cloud.size());
+    pcl::PointCloud<pcl::PointXYZ> ordered_point_cloud;
+    ordered_point_cloud.reserve(point_cloud.size());
+
+    unordered_point_cloud = point_cloud;
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+
+    // Unsafe Method
+    #if 0
+    std::size_t i = 0;
+    pcl::PointXYZ searchpoint = point_cloud.points[i];
+    pcl::PointXYZ prev_searchpoint;
+
+    kdtree.setInputCloud(point_cloud.makeShared());
+    std::vector<int> pointIdxNKNSearch_sing(1);
+    std::vector<int> pointIdxNKNSearch_mult(2);
+    std::vector<float> pointNKNSquaredDistance_sing(1);
+    std::vector<float> pointNKNSquaredDistance_mult(2);      
+
+    ordered_point_cloud.push_back(searchpoint);
+    while (i < (point_cloud.size() - 1))
+    {
+      if (i == 0)
+      {
+        if (kdtree.nearestKSearch(searchpoint, 2, pointIdxNKNSearch_sing, pointNKNSquaredDistance_sing) > 0)
+        {
+          prev_searchpoint = searchpoint;
+          searchpoint = point_cloud.points[pointIdxNKNSearch_sing[1]];
+          ordered_point_cloud.push_back(searchpoint);
+        }
+      }
+      else
+      {
+        if (kdtree.nearestKSearch(searchpoint, 3, pointIdxNKNSearch_mult, pointNKNSquaredDistance_mult) > 0)
+        {
+          //if (point_cloud.points[pointIdxNKNSearch_mult[0]] == prev_searchpoint)
+          if (checkIfPointsAreEqual(point_cloud.points[pointIdxNKNSearch_mult[1]], prev_searchpoint))
+          {
+            prev_searchpoint = searchpoint;
+            searchpoint = point_cloud.points[pointIdxNKNSearch_mult[2]];
+            ordered_point_cloud.push_back(searchpoint);
+          }
+          else
+          {
+            prev_searchpoint = searchpoint;
+            searchpoint = point_cloud.points[pointIdxNKNSearch_mult[1]];
+            ordered_point_cloud.push_back(searchpoint);
+          }
+        }
+      }
+      i++;
+    }
+    #endif
+
+    // Safe Method
+    #if 0
+    #endif
+
+    //if (point_cloud.size() == ordered_point_cloud.size()) { std::cout << "The clouds are the same size!" << std::endl; }
+    return ordered_point_cloud;
+  }
+
   static void
   extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
                                       const PointCloudBoundaryVector &boundary_cloud,
@@ -360,7 +439,7 @@ public:
         k++;
       }
 
-      boundary_points.push_back(temp_cloud);
+      boundary_points.push_back(defineOrderForPointCloud(temp_cloud));
     }     
   }
 
@@ -576,12 +655,15 @@ public:
     for (std::map<int, PointVector>::const_iterator it = debug_display_data->additional_poses_.begin();
          it != debug_display_data->additional_poses_.end(); it++)
     {  
-      if (it->first == debug_display_data->current_pose_index_ || (it->first + 1) == debug_display_data->current_pose_index_)
+      if (it->first == debug_display_data->current_pose_index_)// || (it->first + 1) == debug_display_data->current_pose_index_)
       {
         for (std::size_t i = 0; i < it->second.size(); i++)
         {
           std::string additional_name = "additional_pose_" + std::to_string(i);
-          debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
+          if (i == it->second.size()-1)
+            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 0.0, 1.0, additional_name);
+          else
+            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
         }
         debug_display_data->rendered_shape_count_ = it->second.size();
         debug_display_data->rendered_additional_shapes_ = true;
@@ -653,7 +735,6 @@ public:
       The returned index is the first index of the jump. So if the index is 100, the large jump is
       between poses 100 and 101.
   */
-
   static float
   distanceBetweenTwoPoints(const PointVector &point_vector,
                            const int index_1,

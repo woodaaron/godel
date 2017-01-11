@@ -25,7 +25,6 @@
 
 namespace godel_scan_tools
 {
-
 typedef std::vector<pcl::PointCloud<pcl::PointXYZ>, Eigen::aligned_allocator<pcl::PointXYZ>> PointCloudVector;
 typedef std::vector<pcl::PointCloud<pcl::Boundary>, Eigen::aligned_allocator<pcl::Boundary>> PointCloudBoundaryVector;
 typedef std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> EigenPoseMatrix;
@@ -417,6 +416,7 @@ public:
     std::vector<float> pointNKNSquaredDistance(K);
     ordered_point_cloud.push_back(searchpoint);
 
+    /*
     while (i < (unordered_point_cloud.size() - 1))
     {
       kdtree.setInputCloud(unordered_point_cloud.makeShared());
@@ -428,6 +428,18 @@ public:
         i++;
       }
     }
+    */
+
+    for (std::size_t i = 0; i < point_cloud.points.size() - 1; i++)
+    {
+      kdtree.setInputCloud(unordered_point_cloud.makeShared());
+      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+      {
+        unordered_point_cloud.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
+        searchpoint = unordered_point_cloud[1];
+        ordered_point_cloud.push_back(searchpoint);
+      }
+    }
     #endif
 
     //if (point_cloud.size() == ordered_point_cloud.size()) { std::cout << "The clouds are the same size!" << std::endl; }
@@ -436,14 +448,24 @@ public:
     // {
     //   std::cout << point_cloud.points[i] << " : " << ordered_point_cloud.points[i] << std::endl;
     // }
+
+    /*
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
     viewer->setBackgroundColor (0, 0, 0);
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
-    viewer->addPointCloud<pcl::PointXYZRGB> (point_cloud.makeShared(), unordered, "unordered cloud");
-    viewer->addPointCloud<pcl::PointXYZRGB> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
-    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
-    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
+    viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
+    viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
+    while (!viewer->wasStopped ())
+    {
+      viewer->spinOnce (100);
+      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+    }
+    std::cout << "unordered size: " << point_cloud.points.size() << std::endl;
+    std::cout << "ordered size: " << ordered_point_cloud.points.size() << std::endl;
+    */
     return ordered_point_cloud;
   }
 

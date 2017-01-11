@@ -687,8 +687,10 @@ public:
   static PointVector
   calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
                                           const PointVector &neighbor_new_pose_points, 
-                                          const int index)
+                                          const int &index,
+                                          const int &num_poses_required)
   {
+    PointVector additional_points;
     int K = 1;
     int pose_index;
     int closest_pose_index;
@@ -715,17 +717,58 @@ public:
     
     if (pose_index == 0 && closest_pose_index > 0)
     {
+      // This means the shortest way to the other pose is to move to the next pose in the boundary.
       if ((closest_pose_index - pose_index) < boundary_points[index].width / 2)
       {
         std::cout << "The closest way to get to closest_pose_index is to add" << std::endl;
-
+        if (closest_pose_index > num_poses_required)
+        {
+          int skip_point = (int)floor(closest_pose_index / num_poses_required);
+          for (std::size_t i = 0; i < closest_pose_index; i += skip_point)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+        }
+        else
+        {
+          for (std::size_t i = 0; i < closest_pose_index; i++)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+        }
       }
+      // This means the shortest way to the other pose is to move backwards in the boundary.
       else
       {
         std::cout << "The closest way to get to the closest_pose_index is to subtract" << std::endl;
-        
+        if ((closest_pose_index - ((boundary_points[index].width / 2)-1)) > num_poses_required)
+        {
+          int skip_point = (int)floor((closest_pose_index - ((boundary_points[index].width / 2) - 1)) / num_poses_required);
+          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width / 2) - 1)); i+= skip_point)
+          {
+            if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
+            else
+            {
+              int point_index = boundary_points[index].width - i - skip_point;
+              additional_points.push_back(boundary_points[index].points[point_index]);
+            }
+          }
+        }
+        else
+        {
+          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width / 2) - 1)); i++)
+          {
+            if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
+            else
+            {
+              int point_index = boundary_points[index].width - i;
+              additional_points.push_back(boundary_points[index].points[point_index]);
+            }
+          }
+        }
       }
     }
+    return additional_points;
   }
 
   static void
@@ -737,8 +780,10 @@ public:
     for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
     {
       int index = it->first;
+      int num_poses_required = it->second;
       std::cout << "Index #: " << index << std::endl;
-      additional_poses[it->first] = calculateClosestBoundaryPointToNextPose(boundary_points, neighbor_new_pose_points, index);
+      additional_poses[it->first] = calculateClosestBoundaryPointToNextPose(boundary_points, 
+                                      neighbor_new_pose_points, index, num_poses_required);
     }
 
     // Debug check

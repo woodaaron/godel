@@ -344,8 +344,9 @@ public:
       refined_boundary[i] = boundaries;
     }
 #endif
-    
-#if 0
+
+#if 0 
+    //OLD WAY
     refined_boundary.reserve(refined_cloud.size());
     for (std::size_t i = 0; i < refined_cloud.size(); i++)
     {
@@ -392,8 +393,8 @@ public:
     unordered_point_cloud = point_cloud;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 
-    // Unsafe Method
     #if 0
+    // Unsafe Method
     std::size_t i = 0;
     pcl::PointXYZ searchpoint = point_cloud.points[i];
     pcl::PointXYZ prev_searchpoint;
@@ -439,8 +440,8 @@ public:
     }
     #endif
 
-    // Safe Method
     #if 1
+    // Safe Method
     int K = 2;
     std::size_t i = 0;
     pcl::PointXYZ searchpoint = point_cloud.points[i];
@@ -481,7 +482,7 @@ public:
     //   std::cout << point_cloud.points[i] << " : " << ordered_point_cloud.points[i] << std::endl;
     // }
 
-    /*
+    #if 1
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
     viewer->setBackgroundColor (0, 0, 0);
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
@@ -490,15 +491,44 @@ public:
     viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
+
+    for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
+    {
+      std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
+      std::string shape_name = "shape_" + std::to_string(i);
+      viewer->addSphere(ordered_point_cloud.points[i], 1.5, color[0]/255, color[1]/255, color[2]/255, shape_name);
+    }
+    // viewer->removeShape("asdf");
+
     while (!viewer->wasStopped ())
     {
       viewer->spinOnce (100);
       boost::this_thread::sleep (boost::posix_time::microseconds (100000));
     }
-    std::cout << "unordered size: " << point_cloud.points.size() << std::endl;
-    std::cout << "ordered size: " << ordered_point_cloud.points.size() << std::endl;
-    */
+    // Temp Debug
+
+    //std::cout << "unordered size: " << point_cloud.points.size() << std::endl;
+    //std::cout << "ordered size: " << ordered_point_cloud.points.size() << std::endl;
+    #endif
+
     return ordered_point_cloud;
+  }
+
+  static std::vector<float>
+  getRGB(float intensity)
+  {
+    std::vector<float> rgb_vals;
+    rgb_vals.reserve(3);
+    rgb_vals.push_back((255*intensity)/100);
+    rgb_vals.push_back((255*(100-intensity))/100);
+    rgb_vals.push_back(0);
+    return rgb_vals;
+  }
+
+  static float 
+  mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
+  {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
   }
 
   static void
@@ -506,8 +536,6 @@ public:
                                       const PointCloudBoundaryVector &boundary_cloud,
                                       PointCloudVector &boundary_points)
   {
-    const float bad_point = std::numeric_limits<float>::quiet_NaN();
-
     pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
     for (std::size_t i = 0; i < refined_points_cloud.size(); i++)

@@ -6,7 +6,8 @@
     - SPEED THIS UP!!!
     - Add B-Spline Smoother:
       http://stackoverflow.com/questions/25379422/b-spline-curves
-      http://kluge.in-chemnitz.de/opensource/spline/ 
+      http://kluge.in-chemnitz.de/opensource/spline/
+      http://pointclouds.org/documentation/tutorials/bspline_fitting.php
 */
 
 #ifndef EDGE_REFINEMENT_H

@@ -464,14 +464,14 @@ public:
     }
     */
 
-    for (std::size_t i = 0; i < point_cloud.points.size() - 1; i++)
+    for (std::size_t j = 0; j < point_cloud.points.size() - 1; j++)
     {
       kdtree.setInputCloud(unordered_point_cloud.makeShared());
       if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
       {
-        unordered_point_cloud.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
-        searchpoint = unordered_point_cloud[1];
+        searchpoint = unordered_point_cloud.points[pointIdxNKNSearch[1]];
         ordered_point_cloud.push_back(searchpoint);
+        unordered_point_cloud.points.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
       }
     }
     #endif
@@ -483,7 +483,7 @@ public:
     //   std::cout << point_cloud.points[i] << " : " << ordered_point_cloud.points[i] << std::endl;
     // }
 
-    #if 1
+    #if 0
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
     viewer->setBackgroundColor (0, 0, 0);
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
@@ -497,7 +497,7 @@ public:
     {
       std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
       std::string shape_name = "shape_" + std::to_string(i);
-      viewer->addSphere(ordered_point_cloud.points[i], 1.5, color[0]/255, color[1]/255, color[2]/255, shape_name);
+      viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
     }
     // viewer->removeShape("asdf");
 
@@ -520,8 +520,8 @@ public:
   {
     std::vector<float> rgb_vals;
     rgb_vals.reserve(3);
-    rgb_vals.push_back((255*intensity)/100);
-    rgb_vals.push_back((255*(100-intensity))/100);
+    rgb_vals.push_back(((255*intensity)/100)/255);
+    rgb_vals.push_back(((255*(100-intensity))/100)/255);
     rgb_vals.push_back(0);
     return rgb_vals;
   }

@@ -774,8 +774,9 @@ public:
         for (std::size_t i = 0; i < it->second.size(); i++)
         {
           std::string additional_name = "additional_pose_" + std::to_string(i);
+          // Might be able to remove this.
           if (i == it->second.size()-1)
-            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 0.0, 1.0, additional_name);
+            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
           else
             debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
         }

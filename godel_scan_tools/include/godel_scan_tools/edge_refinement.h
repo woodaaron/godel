@@ -4,6 +4,7 @@
     - Move function implementations to separate cpp file.
     - Check ENSENSO scan density and predict the amount of neighbors.
     - SPEED THIS UP!!!
+    - Add new points to refined_poses and possibly check if order is correct.
     - Add B-Spline Smoother:
       http://stackoverflow.com/questions/25379422/b-spline-curves
       http://kluge.in-chemnitz.de/opensource/spline/
@@ -946,11 +947,12 @@ public:
     if (pose_index == 0 && closest_pose_index > 0)
     {
       // This means the shortest way to the other pose is to move to the next pose in the boundary.
-      if ((closest_pose_index - pose_index) < boundary_points[index].width / 2)
+      if ((closest_pose_index - pose_index) < ((boundary_points[index].width / 2)))
       {
         std::cout << "The closest way to get to closest_pose_index is to add" << std::endl;
         if (closest_pose_index > num_poses_required)
         {
+          std::cout << "Skipping Points" << std::endl;
           int skip_point = (int)floor(closest_pose_index / num_poses_required);
           for (std::size_t i = 0; i < closest_pose_index; i += skip_point)
           {
@@ -959,20 +961,27 @@ public:
         }
         else
         {
+          std::cout << "Not Skipping Points" << std::endl;
           for (std::size_t i = 0; i < closest_pose_index; i++)
           {
             additional_points.push_back(boundary_points[index].points[i]);
           }
         }
       }
+
       // This means the shortest way to the other pose is to move backwards in the boundary.
       else
       {
         std::cout << "The closest way to get to the closest_pose_index is to subtract" << std::endl;
-        if ((closest_pose_index - ((boundary_points[index].width / 2)-1)) > num_poses_required)
+        //if ((closest_pose_index - ((boundary_points[index].width / 2)) > num_poses_required)
+        if ((boundary_points[index].width - 1 - closest_pose_index) > num_poses_required)
         {
-          int skip_point = (int)floor((closest_pose_index - ((boundary_points[index].width / 2) - 1)) / num_poses_required);
-          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width / 2) - 1)); i+= skip_point)
+          std::cout << "Skipping Points" << std::endl;
+          //int skip_point = (int)floor((closest_pose_index - ((boundary_points[index].width - 1) / 2)) / num_poses_required);
+          int skip_point = (int)floor((boundary_points[index].width - 1 - closest_pose_index) / num_poses_required);
+
+          /*
+          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width - 1) / 2)); i+= skip_point)
           {
             if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
             else
@@ -981,10 +990,19 @@ public:
               additional_points.push_back(boundary_points[index].points[point_index]);
             }
           }
+          */
+          //for (std::size_t i = (boundary_points[index].width); i >= closest_pose_index; i -= skip_point)
+          for (std::size_t i = closest_pose_index; i < (boundary_points[index].width - 1); i += skip_point)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+          additional_points.push_back(boundary_points[index].points[pose_index]);
         }
         else
         {
-          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width / 2) - 1)); i++)
+          std::cout << "Not Skipping Points" << std::endl;
+          /*
+          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width - 1) / 2)); i++)
           {
             if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
             else
@@ -993,6 +1011,12 @@ public:
               additional_points.push_back(boundary_points[index].points[point_index]);
             }
           }
+          */
+          for (std::size_t i = closest_pose_index; i < (boundary_points[index].width - 1); i++)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+          additional_points.push_back(boundary_points[index].points[pose_index]);
         }
       }
     }

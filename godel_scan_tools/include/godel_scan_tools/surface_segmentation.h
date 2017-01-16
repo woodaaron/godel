@@ -5,6 +5,7 @@
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/surface/gp3.h>
 #include <pcl/PolygonMesh.h>
 #include <pcl/geometry/mesh_base.h>
@@ -590,7 +591,7 @@ private:
   {
     normals_->points.clear();
     // Estimate the normals
-    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
     ne.setInputCloud (input_cloud_);
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
     ne.setSearchMethod (tree);

@@ -20,6 +20,7 @@
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/surface/gp3.h>
 #include <pcl/features/boundary.h>
 #include <pcl/surface/concave_hull.h>
@@ -303,7 +304,7 @@ public:
   static void
   computeNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::Normal> &normals)
   {
-    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normal_estimation;
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
 
     normal_estimation.setInputCloud(input_cloud);

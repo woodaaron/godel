@@ -810,7 +810,7 @@ public:
 
     for (std::size_t i = 0; i < (boundary_poses.size() - 1); i++)
     {
-      //assert(boundary_poses.size() == refined_poses.size()); // May need to remove this in the future?
+      assert(boundary_poses.size() == refined_poses.size()); // May need to remove this in the future?
       std::string original_name = "original_line_" + std::to_string(i);
       std::string refined_name = "refined_line_" + std::to_string(i);
       pcl::PointXYZ original_p1(boundary_poses[i](0,3), boundary_poses[i](1,3), boundary_poses[i](2,3));
@@ -1102,8 +1102,6 @@ public:
       total_points_to_add += it->second.size();
     }
 
-    refined_poses.resize(refined_poses.size() + total_points_to_add);
-
     std::vector<int> new_indices;
     new_indices.reserve(additional_poses.size());
 
@@ -1133,6 +1131,7 @@ public:
     }
 
     // Debug Check
+    std::cout << "Size of Refined Pose Matrix: " << refined_poses.size() << std::endl;
     for (std::size_t i = 0; i < new_indices.size(); i++)
     {
       std::cout << "Old Index: " << additional_pose_indices[i] <<
@@ -1213,15 +1212,21 @@ public:
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
-
-    // 8) Determine the indices at whcih to add the additional poses and add in additional poses to the refined poses
-    addAdditionalPosesToRefinedPoses(boundary_poses, additional_poses, refined_poses);
-
     if (debug_display_)
     {
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
                    neighbor_boundary_points, neighbor_new_pose_points, refined_poses, additional_poses);
     }
+
+    // 8) Determine the indices at whcih to add the additional poses and add in additional poses to the refined poses
+    addAdditionalPosesToRefinedPoses(boundary_poses, additional_poses, refined_poses);
+
+    // Debug Check
+    // for (std::size_t i = 0; i < refined_poses.size(); i++)
+    // {
+    //   std::cout << refined_poses[i] << std::endl;
+    // }
+
     #if 0
     for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {

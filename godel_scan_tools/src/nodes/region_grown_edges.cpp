@@ -308,7 +308,7 @@ main (int argc, char** av)
   EF.setNumberOfNeighbors(5000);
   EF.setBoundarySearchRadius(5.0);
   EF.setVisualCloud(colored_cloud_ptr);
-  EF.setDebugDisplay(true);
+  EF.setDebugDisplay(false);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
 
   q = 0;
@@ -329,7 +329,7 @@ main (int argc, char** av)
 
 #if 1
   // for(int j=0; j<refined_pose_trajectory.size()-1; j++)
-  for(int j=0; j<refined_pose_trajectory.size() - 1; j++) // Removing -1 fixes this segfault.
+  for(int j=0; j<refined_pose_trajectory.size() - 2; j++) // Removing -1 fixes this segfault.
   {
     char line_number[255];
     sprintf(line_number,"%03d",q++);

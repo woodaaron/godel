@@ -50,7 +50,7 @@ typedef typename Mesh::InnerHalfEdgeAroundFaceCirculator IHEAFC;
 /** @class world_background_subtraction
 @brief Maintains record of baseline sensor data to provide method to remove them leaving only new objects in the scene
 */
-class surfaceSegmentation
+class SurfaceSegmentation
 {
   public:
 
@@ -73,14 +73,14 @@ class surfaceSegmentation
   double radius_;
 
   /** @brief default constructor */
-  surfaceSegmentation()
+  SurfaceSegmentation()
   {
     // initialize pointers to cloud members
     input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
   }
 
   /** @brief distructor */
-  ~surfaceSegmentation()
+  ~SurfaceSegmentation()
   {
     input_cloud_ =  pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
     normals_ =  pcl::PointCloud<pcl::Normal>::Ptr(new pcl::PointCloud<pcl::Normal>);
@@ -90,7 +90,7 @@ class surfaceSegmentation
   /** @brief constructor that sets the background cloud, also initializes the KdTree for searching
   @param bg_cloud the set of points defining the background
   */
-  surfaceSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr icloud)
+  SurfaceSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr icloud)
   {
     input_cloud_ =  pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
     normals_ =  pcl::PointCloud<pcl::Normal>::Ptr(new pcl::PointCloud<pcl::Normal>);

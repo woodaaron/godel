@@ -147,7 +147,7 @@ main (int argc, char** av)
 
   // Segment the part into surface regions using a "region growing" scheme
   pcl::console::print_highlight ("segmenting\n");
-  surfaceSegmentation SS(part_cloud_ptr); // removes NANs and computes normals
+  SurfaceSegmentation SS(part_cloud_ptr); // removes NANs and computes normals
 
   if(pcl::console::find_switch(argc, av, "-meters"))
   {

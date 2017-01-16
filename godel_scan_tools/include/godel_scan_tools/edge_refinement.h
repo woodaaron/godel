@@ -1050,6 +1050,12 @@ public:
     }
   }
 
+  static void
+  addAdditionalPosesToRefinedPoses()
+  {
+
+  }
+
   void 
   refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
                  EigenPoseMatrix &refined_poses)
@@ -1128,6 +1134,8 @@ public:
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
                    neighbor_boundary_points, neighbor_new_pose_points, refined_poses, additional_poses);
     }
+
+    // 8) Add in additional poses to the refined poses
 
     #if 0
     for (std::size_t i = 0; i < boundary_poses.size(); i++)

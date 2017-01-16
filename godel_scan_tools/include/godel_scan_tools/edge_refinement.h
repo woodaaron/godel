@@ -871,7 +871,7 @@ public:
                                   const float &standard_deviation)
   {
     int number_of_points = round(distance_between_points / standard_deviation);
-    return round(1.5*(number_of_points - 2)); // -2 because of the original two points.
+    return round(2*(number_of_points - 2)); // -2 because of the original two points.
   }
 
   static void
@@ -955,7 +955,7 @@ public:
         {
           std::cout << "Skipping Points" << std::endl;
           int skip_point = (int)floor(closest_pose_index / num_poses_required);
-          for (std::size_t i = 0; i < closest_pose_index; i += skip_point)
+          for (std::size_t i = pose_index; i < closest_pose_index; i += skip_point)
           {
             additional_points.push_back(boundary_points[index].points[i]);
           }
@@ -963,7 +963,7 @@ public:
         else
         {
           std::cout << "Not Skipping Points" << std::endl;
-          for (std::size_t i = 0; i < closest_pose_index; i++)
+          for (std::size_t i = pose_index; i < closest_pose_index; i++)
           {
             additional_points.push_back(boundary_points[index].points[i]);
           }
@@ -993,11 +993,11 @@ public:
           }
           */
           //for (std::size_t i = (boundary_points[index].width); i >= closest_pose_index; i -= skip_point)
-          for (std::size_t i = closest_pose_index; i < (boundary_points[index].width - 1); i += skip_point)
+          additional_points.push_back(boundary_points[index].points[pose_index]);
+          for (std::size_t i = (boundary_points[index].width - 2); i > closest_pose_index; i -= skip_point)
           {
             additional_points.push_back(boundary_points[index].points[i]);
           }
-          additional_points.push_back(boundary_points[index].points[pose_index]);
         }
         else
         {
@@ -1049,18 +1049,6 @@ public:
       }
     }
   }
-
-/*
-  static void
-  indicesToAddAdditionalPoses(const std::map<int, PointVector> &additional_poses,
-                              EigenPoseMatrix &refined_poses)
-  {
-    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
-    {
-      std::cout << "Pose: " << it->first << " Requires: " << it->second.size() << " points" << std::endl;
-    }
-  }
-*/
 
   static EigenPoseMatrix
   convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
@@ -1127,7 +1115,7 @@ public:
                                                                                additional_pose_indices[i]);
       EigenPoseMatrix::iterator it;
       it = refined_poses.begin();
-      it = refined_poses.insert(it + new_indices[i], temp_additional_pose_matrix.begin(), temp_additional_pose_matrix.end());
+      it = refined_poses.insert(it + new_indices[i] + 1, temp_additional_pose_matrix.begin(), temp_additional_pose_matrix.end());
     }
 
     // Debug Check
@@ -1222,10 +1210,12 @@ public:
     addAdditionalPosesToRefinedPoses(boundary_poses, additional_poses, refined_poses);
 
     // Debug Check
-    // for (std::size_t i = 0; i < refined_poses.size(); i++)
-    // {
-    //   std::cout << refined_poses[i] << std::endl;
-    // }
+    #if 0
+    for (std::size_t i = 0; i < refined_poses.size(); i++)
+    {
+      std::cout << refined_poses[i] << std::endl;
+    }
+    #endif
 
     #if 0
     for (std::size_t i = 0; i < boundary_poses.size(); i++)

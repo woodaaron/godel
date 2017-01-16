@@ -55,6 +55,23 @@
 #include "godel_scan_tools/background_subtraction.h"
 #include "godel_scan_tools/edge_refinement.h"
 
+std::vector<float>
+getRGB(float intensity)
+{
+  std::vector<float> rgb_vals;
+  rgb_vals.reserve(3);
+  rgb_vals.push_back(((255*intensity)/100)/255);
+  rgb_vals.push_back(((255*(100-intensity))/100)/255);
+  rgb_vals.push_back(0);
+  return rgb_vals;
+}
+
+float 
+mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 int
 main (int argc, char** av)
 {
@@ -329,8 +346,24 @@ main (int argc, char** av)
 
 #if 1
   // for(int j=0; j<refined_pose_trajectory.size()-1; j++)
-  for(int j=0; j<refined_pose_trajectory.size() - 2; j++) // Removing -1 fixes this segfault.
+  for(int j=0; j<refined_pose_trajectory.size() - 1; j++) // Removing -1 fixes this segfault.
   {
+    // std::vector<float> color;
+    // if (j % 2 == 0)
+    // {
+    //   color.clear();
+    //   color.push_back(0.0);
+    //   color.push_back(1.0);
+    //   color.push_back(0.0);
+    // }
+    // else
+    // {
+    //   color.clear();
+    //   color.push_back(1.0);
+    //   color.push_back(0.0);
+    //   color.push_back(0.0);
+    // }
+
     char line_number[255];
     sprintf(line_number,"%03d",q++);
     std::string ls = std::string("rline_") + std::string(line_number);
@@ -338,6 +371,7 @@ main (int argc, char** av)
     pcl::PointXYZ p2(refined_pose_trajectory[j+1](0,3),refined_pose_trajectory[j+1](1,3),refined_pose_trajectory[j+1](2,3));
     viewer->addLine<pcl::PointXYZ> ( p1,p2,ls.c_str());
     viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
+    //viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, color[0], color[1], color[2], ls.c_str());
   }// end for each boundary point
 #endif
 
@@ -369,3 +403,4 @@ main (int argc, char** av)
   }
   return (0);
 }
+

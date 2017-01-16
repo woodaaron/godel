@@ -313,7 +313,7 @@ main (int argc, char** av)
 
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)
-  for(int i = 0; i < refined_pose_trajectory.size(); i++)
+  for(int i = 0; i < refined_pose_trajectory.size() - 1; i++)
   {
     if(q++ % 20 == 0)
     {

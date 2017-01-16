@@ -810,7 +810,7 @@ public:
 
     for (std::size_t i = 0; i < (boundary_poses.size() - 1); i++)
     {
-      assert(boundary_poses.size() == refined_poses.size()); // May need to remove this in the future?
+      //assert(boundary_poses.size() == refined_poses.size()); // May need to remove this in the future?
       std::string original_name = "original_line_" + std::to_string(i);
       std::string refined_name = "refined_line_" + std::to_string(i);
       pcl::PointXYZ original_p1(boundary_poses[i](0,3), boundary_poses[i](1,3), boundary_poses[i](2,3));
@@ -871,7 +871,7 @@ public:
                                   const float &standard_deviation)
   {
     int number_of_points = round(distance_between_points / standard_deviation);
-    return number_of_points - 2; // -2 because of the original two points.
+    return round(1.5*(number_of_points - 2)); // -2 because of the original two points.
   }
 
   static void
@@ -1050,17 +1050,101 @@ public:
     }
   }
 
+/*
   static void
-  addAdditionalPosesToRefinedPoses()
+  indicesToAddAdditionalPoses(const std::map<int, PointVector> &additional_poses,
+                              EigenPoseMatrix &refined_poses)
   {
+    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
+    {
+      std::cout << "Pose: " << it->first << " Requires: " << it->second.size() << " points" << std::endl;
+    }
+  }
+*/
 
+  static EigenPoseMatrix
+  convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
+                             const PointVector &points,
+                             const int &index)
+  {
+    EigenPoseMatrix additional_poses;
+    additional_poses.reserve(points.size());
+
+    Eigen::Matrix4f temp_pose;
+    for (std::size_t i = 0; i < points.size(); i++)
+    {
+      temp_pose = boundary_poses[index];
+      temp_pose(0, 3) = points[i].x;
+      temp_pose(1, 3) = points[i].y;
+      temp_pose(2, 3) = points[i].z;
+      additional_poses.push_back(temp_pose);
+    }
+    return additional_poses;
+  }
+
+  static void
+  addAdditionalPosesToRefinedPoses(const EigenPoseMatrix &boundary_poses,
+                                   const std::map<int, PointVector> &additional_poses,
+                                   EigenPoseMatrix &refined_poses)
+  {
+    int total_points_to_add = 0;
+
+    std::vector<int> additional_pose_indices;
+    additional_pose_indices.reserve(additional_poses.size());
+
+    std::vector<PointVector> additional_pose_points;
+    additional_pose_points.reserve(additional_poses.size());
+    
+    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
+    {
+      additional_pose_indices.push_back(it->first);
+      additional_pose_points.push_back(it->second);
+      total_points_to_add += it->second.size();
+    }
+
+    refined_poses.resize(refined_poses.size() + total_points_to_add);
+
+    std::vector<int> new_indices;
+    new_indices.reserve(additional_poses.size());
+
+    int count;
+    for (std::size_t i = 0; i < additional_pose_indices.size(); i++)
+    {
+      if (i == 0) 
+      { 
+        new_indices.push_back(additional_pose_indices[i]);
+        count = additional_pose_points[i].size();
+      }
+      else
+      {
+        new_indices.push_back(additional_pose_indices[i] + count);
+        count += additional_pose_points[i].size();
+      }
+    }
+
+    for (std::size_t i = 0; i < new_indices.size(); i++)
+    {
+      EigenPoseMatrix temp_additional_pose_matrix = convertPointsToEigenMatrix(boundary_poses, 
+                                                                               additional_pose_points[i], 
+                                                                               additional_pose_indices[i]);
+      EigenPoseMatrix::iterator it;
+      it = refined_poses.begin();
+      it = refined_poses.insert(it + new_indices[i], temp_additional_pose_matrix.begin(), temp_additional_pose_matrix.end());
+    }
+
+    // Debug Check
+    for (std::size_t i = 0; i < new_indices.size(); i++)
+    {
+      std::cout << "Old Index: " << additional_pose_indices[i] <<
+      " Points Added: " << additional_pose_points[i].size() << " New Index: " << new_indices[i] << std::endl;
+    }
   }
 
   void 
   refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
                  EigenPoseMatrix &refined_poses)
   {
-    refined_poses.clear();
+    //refined_poses.clear();
 
     // Remove NaNs from input boundary poses.
     EigenPoseMatrix boundary_poses;
@@ -1129,14 +1213,15 @@ public:
     // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
     movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
+
+    // 8) Determine the indices at whcih to add the additional poses and add in additional poses to the refined poses
+    addAdditionalPosesToRefinedPoses(boundary_poses, additional_poses, refined_poses);
+
     if (debug_display_)
     {
       debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
                    neighbor_boundary_points, neighbor_new_pose_points, refined_poses, additional_poses);
     }
-
-    // 8) Add in additional poses to the refined poses
-
     #if 0
     for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
@@ -1157,7 +1242,8 @@ public:
     #endif
   }
 
-  static float maxValueOfVector(std::vector<float> &vec)
+  static float 
+  maxValueOfVector(std::vector<float> &vec)
   {
     float max_value = 0;
     for (std::size_t i = 0; i < vec.size(); i++)

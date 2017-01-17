@@ -322,25 +322,26 @@ main (int argc, char** av)
   // EF.setNumberOfNeighbors(1000);
   // EF.setBoundarySearchRadius(5.0);
   EF.setSearchRadius(10.0);
-  EF.setNumberOfNeighbors(5000);
-  EF.setBoundarySearchRadius(5.0);
+  EF.setNumberOfNeighbors(2500);
+  //EF.setBoundarySearchRadius(5.0);
+  EF.setBoundarySearchRadius(0.05);
   EF.setVisualCloud(colored_cloud_ptr);
   EF.setDebugDisplay(false);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
 
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)
-  for(int i = 0; i < refined_pose_trajectory.size() - 1; i++)
-  {
-    if(q++ % 20 == 0)
-    {
-      char line_number[255];
-      sprintf(line_number,"%03d",q++);
-      std::string ls = std::string("pose_") + std::string(line_number);
-      Eigen::Affine3f pose(refined_pose_trajectory[i].matrix()); // I think this is where it is breaking.
-      viewer->addCoordinateSystem (.030, pose, "asdf", 0);
-    }
-  }
+  // for(int i = 0; i < refined_pose_trajectory.size() - 1; i++)
+  // {
+  //   if(q++ % 20 == 0)
+  //   {
+  //     char line_number[255];
+  //     sprintf(line_number,"%03d",q++);
+  //     std::string ls = std::string("pose_") + std::string(line_number);
+  //     Eigen::Affine3f pose(refined_pose_trajectory[i].matrix()); // I think this is where it is breaking.
+  //     viewer->addCoordinateSystem (.030, pose, "asdf", 0);
+  //   }
+  // }
 
   color = (color+2)%6;
 
@@ -370,8 +371,8 @@ main (int argc, char** av)
     pcl::PointXYZ p1(refined_pose_trajectory[j](0,3),refined_pose_trajectory[j](1,3),refined_pose_trajectory[j](2,3));
     pcl::PointXYZ p2(refined_pose_trajectory[j+1](0,3),refined_pose_trajectory[j+1](1,3),refined_pose_trajectory[j+1](2,3));
     viewer->addLine<pcl::PointXYZ> ( p1,p2,ls.c_str());
-    viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
-    //viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, color[0], color[1], color[2], ls.c_str());
+    //viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, red[color], green[color], blue[color], ls.c_str());
+    viewer->setShapeRenderingProperties ( pcl::visualization::PCL_VISUALIZER_COLOR, 0.0, 1.0, 0.0, ls.c_str());
   }// end for each boundary point
 #endif
 

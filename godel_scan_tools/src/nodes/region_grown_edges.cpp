@@ -154,13 +154,16 @@ main (int argc, char** av)
   pcl::console::print_highlight ("segmenting\n");
   SurfaceSegmentation SS(part_cloud_ptr); // removes NANs and computes normals
 
+  double ee_search_radius;
   if(pcl::console::find_switch(argc, av, "-meters"))
   {
     SS.setSearchRadius(.03);
+    ee_search_radius = 0.005;
   }
   else
   {
     SS.setSearchRadius(30.0);
+    ee_search_radius = 5;
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -312,7 +315,7 @@ main (int argc, char** av)
   EF.setSearchRadius(10.0);
   EF.setNumberOfNeighbors(2500);
   //EF.setBoundarySearchRadius(5.0);
-  EF.setBoundarySearchRadius(5);
+  EF.setBoundarySearchRadius(ee_search_radius);
   EF.setVisualCloud(colored_cloud_ptr);
   EF.setDebugDisplay(false);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);

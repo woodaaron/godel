@@ -55,23 +55,6 @@
 #include "godel_scan_tools/background_subtraction.h"
 #include "godel_scan_tools/edge_refinement.h"
 
-std::vector<float>
-getRGB(float intensity)
-{
-  std::vector<float> rgb_vals;
-  rgb_vals.reserve(3);
-  rgb_vals.push_back(((255*intensity)/100)/255);
-  rgb_vals.push_back(((255*(100-intensity))/100)/255);
-  rgb_vals.push_back(0);
-  return rgb_vals;
-}
-
-float 
-mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 int
 main (int argc, char** av)
 {

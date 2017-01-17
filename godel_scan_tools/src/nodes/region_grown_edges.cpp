@@ -39,6 +39,8 @@
 
 // STL
 #include <iostream>
+#include <chrono>
+#include <cmath>
 
 // PCL
 #include <pcl/filters/filter.h>
@@ -55,9 +57,12 @@
 #include "godel_scan_tools/background_subtraction.h"
 #include "godel_scan_tools/edge_refinement.h"
 
+typedef std::chrono::high_resolution_clock Clock;
+
 int
 main (int argc, char** av)
 {
+  auto start_time = Clock::now();
   if (argc < 3)
   {
     pcl::console::print_info ("Syntax is: %s <source-pcd-background_file> <source-pcd-with_part_file> [-dump] [-select_segment] [-meters]\n\n", av[0]);
@@ -311,6 +316,10 @@ main (int argc, char** av)
   EF.setVisualCloud(colored_cloud_ptr);
   EF.setDebugDisplay(false);
   EF.refineBoundary(pose_trajectory, refined_pose_trajectory);
+
+  auto end_time = Clock::now();
+  std::cout << "Total Calculation Run Time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() << " nanoseconds" << std::endl;
+  std::cout << "Total Calculation Run Time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() / pow(10,9) << " seconds" << std::endl;
 
   q = 0;
   //for(int i=0;i<pose_trajectory.size();i++)

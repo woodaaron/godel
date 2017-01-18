@@ -109,7 +109,6 @@ class SurfaceSegmentation
     {
       input_cloud_->push_back(pt);
     }
-    computeNormals();
   }
 
   /** @brief adds new points to the background, and reinitializes the kd_tree for searching

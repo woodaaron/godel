@@ -97,7 +97,10 @@ catkin_package(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS 
+    include
+  LIBRARIES
+    edge_refinement
   CATKIN_DEPENDS 
      roscpp
 #  LIBRARIES godel_scan_tools
@@ -111,11 +114,14 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
+   include
    ${catkin_INCLUDE_DIRS}
    ${Boost_INCLUDE_DIRS}
    ${PCL_INCLUDE_DIRS}
-   include
 )
+
+add_library(edge_refinement src/edge_refinement.cpp)
+target_link_libraries(edge_refinement ${catkin_LIBRARIES})
 
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -128,17 +134,18 @@ add_definitions(${PCL_DEFINITIONS})
 ## Declare a cpp executable
 add_executable(region_grown_edges src/nodes/region_grown_edges.cpp)
 target_compile_options(region_grown_edges PRIVATE ${OpenMP_FLAGS})
-add_dependencies(region_grown_edges ${catkin_EXPORTED_TARGETS})
+add_dependencies(region_grown_edges ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #add_executable(bs_test test/godel_scan_tools_test.cpp )
 target_link_libraries(region_grown_edges
-   ${catkin_LIBRARIES}
-   #libvtkCommon.so
-   #libvtkFiltering.so
-   #"/usr/lib/libvtkFiltering.so.5.10.1"
-   #"/usr/lib/libvtkCommon.so.5.10.1"
-   ${PCL_LIBRARIES}
-   ${OpenMP_LIBS}
+  edge_refinement
+  ${catkin_LIBRARIES}
+  #libvtkCommon.so
+  #libvtkFiltering.so
+  #"/usr/lib/libvtkFiltering.so.5.10.1"
+  #"/usr/lib/libvtkCommon.so.5.10.1"
+  ${PCL_LIBRARIES}
+  ${OpenMP_LIBS}
 )
 
 

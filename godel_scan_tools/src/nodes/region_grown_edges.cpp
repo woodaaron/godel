@@ -312,7 +312,7 @@ main (int argc, char** av)
   // EF.setSearchRadius(50.0);
   // EF.setNumberOfNeighbors(1000);
   // EF.setBoundarySearchRadius(5.0);
-  EF.setSearchRadius(10.0);
+  // EF.setSearchRadius(10.0);
   EF.setNumberOfNeighbors(2500);
   //EF.setBoundarySearchRadius(5.0);
   EF.setBoundarySearchRadius(ee_search_radius);

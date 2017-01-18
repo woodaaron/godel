@@ -36,6 +36,9 @@ typedef std::vector<pcl::PointXYZ> PointVector;
 typedef Eigen::Matrix<float, 1, 3> NormalVector;
 typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
 
+/**
+ * @brief      Structure containing the data for the debug display.
+ */
 struct DebugDisplayData
 {
   bool rendered_additional_shapes_;
@@ -51,6 +54,19 @@ struct DebugDisplayData
   PointVector new_pose_points_;
   std::map<int, PointVector> additional_poses_;
 
+  /**
+   * @brief      Constructor for DebugDisplayData.
+   *
+   * @param[in]  current_pose_index              The current pose index
+   * @param[in]  num_poses                       The number poses
+   * @param      viewer                          The viewer
+   * @param[in]  boundary_poses                  The boundary poses
+   * @param[in]  boundary_pose_neighbor          The boundary pose neighbor
+   * @param[in]  refined_boundary_pose_neighbor  The refined boundary pose neighbor
+   * @param[in]  neighbor_boundary_points        The neighbor boundary points
+   * @param[in]  new_pose_points                 The new pose points
+   * @param[in]  additional_poses                The additional poses
+   */
   DebugDisplayData(const std::size_t current_pose_index, const std::size_t num_poses, 
                    pcl::visualization::PCLVisualizer *viewer,
                    const EigenPoseMatrix boundary_poses, 
@@ -58,41 +74,115 @@ struct DebugDisplayData
                    const PointCloudVector refined_boundary_pose_neighbor, 
                    const PointCloudVector neighbor_boundary_points,
                    const PointVector new_pose_points,
-                   const std::map<int, PointVector> additional_poses)
-  {
-    current_pose_index_ = current_pose_index;
-    num_poses_ = num_poses;
-    viewer_ = viewer;
-
-    boundary_poses_ = boundary_poses;
-    boundary_pose_neighbor_ = boundary_pose_neighbor;
-    refined_boundary_pose_neighbor_ = refined_boundary_pose_neighbor;
-    neighbor_boundary_points_ = neighbor_boundary_points;
-    new_pose_points_ = new_pose_points;
-    additional_poses_ = additional_poses;
-    rendered_additional_shapes_ = 0;
-    rendered_shape_count_ = 0;
-  }
+                   const std::map<int, PointVector> additional_poses);
 };
 
+/**
+ * @brief      Class for edge refinement.
+ */
 class EdgeRefinement
 {
 public:
-  /*
-  *   @brief constructor 
-  *   @param cloud input cloud from which you plan to refine a boundary
-  */
-  EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
-                tree_(new pcl::search::KdTree<pcl::PointXYZ>()), 
-                point_density_(0), edge_direction_(0)
+  /**
+   * @brief      Constructor for EdgeRefinement class.
+   *
+   * @param[in]  cloud  Original Point cloud data that does not contain any NaNs.
+   */
+  EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+
+  /**
+   * @brief      Constructor for EdgeRefinement class with initializer list.
+   */
+  EdgeRefinement():tree_(new pcl::search::KdTree<pcl::PointXYZ>()), point_density_(0), edge_direction_(0) {}
+
+  /**
+   * @brief      Main function of the class. Refines the boundary defined by the original boundary
+   *             poses and returns the refined poses.
+   *
+   * @details    This algorithm removes any NaN's from the original boundary poses, then:
+   *             1) Finds all points within N points of each boundary pose using a nearest neighbor search.
+   *             2) Removes all points that do not lie on the x-y plane of that pose with some allowed deviation.
+   *             3) Determines which of the remaining points are "boundary points".
+   *             4) Extracts those boundary point indices from the original point cloud.
+   *             5) Determines which boundary point is closest to the original pose.
+   *             6) Generates refined poses by moving the original pose orientations to the closest boundary point.
+   *             7) Calculates if any of the new pose points make a large jump.
+   *             8) Generates additional points that follow along the path of the actual boundary for the large jump.
+   *             8) Determines which indices require addional poses and adds them to the refined poses.
+   *              
+   * @param[in]  original_boundary_poses  The original boundary poses
+   * @param      refined_poses            The refined poses
+   */
+  void refineBoundary(const EigenPoseMatrix &original_boundary_poses, EigenPoseMatrix &refined_poses);
+
+  /**
+   * @brief      Sets the search radius for the boundary search.
+   *
+   * @param[in]  search_radius  The search radius
+   */
+  void setBoundarySearchRadius(float search_radius) { boundary_search_radius_ = search_radius; }
+
+  /**
+   * @brief      Gets the search radius for the boundary search.
+   *
+   * @return     The boundary search radius.
+   */
+  float getBoundarySearchRadius(void) { return boundary_search_radius_; }
+
+  /**
+   * @brief      Sets the number of neighbors to find for each boundary pose.
+   *
+   * @param[in]  number_of_neighbors  The number of neighbors
+   */
+  void setNumberOfNeighbors(int number_of_neighbors) { number_of_neighbors_ = number_of_neighbors; }
+
+  /**
+   * @brief      Gets the number of neighbors to find for each boundary pose.
+   *
+   * @return     The number of neighbors.
+   */
+  int getNumberOfNeighbors(void) { return number_of_neighbors_; }
+
+  /**
+   * @brief      Sets the debug display.
+   *
+   * @param[in]  debug_display  The debug display
+   */
+  void setDebugDisplay(bool debug_display) { if (debug_display) { debug_display_ = true; } }
+  
+  /**
+   * @brief      Sets the visual cloud.
+   *
+   * @param[in]  colored_cloud_ptr  The colored cloud pointer
+   */
+  void setVisualCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud_ptr)
   {
-    tree_->setInputCloud(cloud);
-    input_cloud_= pcl::PointCloud<pcl::PointXYZ>::Ptr(cloud);
-    visual_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-    current_pose_index_ = 0;
-    debug_display_ = false;
-    getPointDensity();
+    visual_cloud_->clear();
+    for (const auto &pt : *colored_cloud_ptr) { visual_cloud_->push_back(pt); }
   }
+  
+private:
+  /**
+   * @brief      Determines if it an Eigen Matrix4f contains any NaNs
+   *
+   * @param[in]  matrix  The matrix
+   *
+   * @return     True if the matrix contains nans, False otherwise.
+   */
+  static bool containsNaNs(Eigen::Matrix4f matrix);
+
+  /**
+   * @brief      Removes all NaNs from a pose trajectory.
+   *
+   * @param[in]  original_boundary_poses  The original boundary poses
+   * @param      boundary_poses_no_nan    The boundary poses no nan
+   */
+  static void removeNaNFromPoseTrajectory(const EigenPoseMatrix &original_boundary_poses,
+                                          EigenPoseMatrix &boundary_poses_no_nan);
+
+
+
+public:
 
 #if 1
   float 
@@ -143,7 +233,7 @@ public:
   }
 #endif
 
-  static void
+  static void 
   nearestNeighborRadiusSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
                               const EigenPoseMatrix &boundary_poses,
                               PointCloudVector &boundary_pose_neighbors,
@@ -561,31 +651,9 @@ public:
     }     
   }
 
-  static bool
-  containsNaNs(Eigen::Matrix4f matrix)
-  {
-    for (std::size_t i = 0; i < 4; i++)
-    {
-      for (std::size_t j = 0; j < 4; j++)
-      {
-        if (std::isnan(matrix(i, j))) { return true; }
-        else { return false; }
-      }
-    }
-  }
 
-  static void 
-  removeNaNFromPoseTrajectory(const EigenPoseMatrix &original_boundary_poses,
-                              EigenPoseMatrix &boundary_poses_no_nan)
-  {
-    for (std::size_t i = 0; i < original_boundary_poses.size(); i++)
-    {
-      if (!containsNaNs(original_boundary_poses[i]))
-      {
-        boundary_poses_no_nan.push_back(original_boundary_poses[i]);
-      }
-    }
-  }
+
+
 
   static void
   calculateClosestPointInBoundaryToPose(const EigenPoseMatrix &boundary_poses,
@@ -665,46 +733,7 @@ public:
     }
   }
 
-  void 
-  setBoundarySearchRadius(float search_radius)
-  {
-    boundary_search_radius_ = search_radius;
-  }
 
-  float
-  getBoundarySearchRadius(void)
-  {
-    return boundary_search_radius_;
-  }
-
-  void 
-  setNumberOfNeighbors(int number_of_neighbors)
-  {
-    number_of_neighbors_ = number_of_neighbors;
-  }
-
-  int 
-  getNumberOfNeighbors(void)
-  {
-    return number_of_neighbors_;
-  }
-
-  void 
-  setSearchRadius(float search_radius)
-  {
-    search_radius_ = search_radius;
-  }
-
-  float 
-  getSearchRadius(void)
-  {
-    return search_radius_;
-  }
-
-  void setDebugDisplay(bool debug_display)
-  {
-    if (debug_display) { debug_display_ = true; }
-  }
 
   static void 
   keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
@@ -837,17 +866,6 @@ public:
       viewer->spinOnce (100);
       boost::this_thread::sleep(boost::posix_time::microseconds (100000));
     }    
-  }
-
-  void
-  setVisualCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud_ptr)
-  {
-    visual_cloud_->clear();
-
-    for (const auto &pt : *colored_cloud_ptr)
-    {
-      visual_cloud_->push_back(pt);
-    }
   }
 
   /*
@@ -1055,22 +1073,22 @@ public:
   static EigenPoseMatrix
   convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
                              const PointVector &points,
-                             const int &index);
-  // {
-  //   EigenPoseMatrix additional_poses;
-  //   additional_poses.reserve(points.size());
+                             const int &index)
+  {
+    EigenPoseMatrix additional_poses;
+    additional_poses.reserve(points.size());
 
-  //   Eigen::Matrix4f temp_pose;
-  //   for (std::size_t i = 0; i < points.size(); i++)
-  //   {
-  //     temp_pose = boundary_poses[index];
-  //     temp_pose(0, 3) = points[i].x;
-  //     temp_pose(1, 3) = points[i].y;
-  //     temp_pose(2, 3) = points[i].z;
-  //     additional_poses.push_back(temp_pose);
-  //   }
-  //   return additional_poses;
-  // }
+    Eigen::Matrix4f temp_pose;
+    for (std::size_t i = 0; i < points.size(); i++)
+    {
+      temp_pose = boundary_poses[index];
+      temp_pose(0, 3) = points[i].x;
+      temp_pose(1, 3) = points[i].y;
+      temp_pose(2, 3) = points[i].z;
+      additional_poses.push_back(temp_pose);
+    }
+    return additional_poses;
+  }
 
   static void
   addAdditionalPosesToRefinedPoses(const EigenPoseMatrix &boundary_poses,
@@ -1129,115 +1147,7 @@ public:
     }
   }
 
-  void 
-  refineBoundary(const EigenPoseMatrix &original_boundary_poses, 
-                 EigenPoseMatrix &refined_poses)
-  {
-    //refined_poses.clear();
 
-    // Remove NaNs from input boundary poses.
-    EigenPoseMatrix boundary_poses;
-    boundary_poses.reserve(original_boundary_poses.size());
-    removeNaNFromPoseTrajectory(original_boundary_poses, boundary_poses);
-    num_poses_ = boundary_poses.size() - 1;
-    current_pose_index_ = num_poses_ / 2; // Sets the debug visualization so it starts near the top.
-
-    // 1) Find all points within R1 of each boundary pose.
-    PointCloudVector boundary_pose_radius;
-    PointCloudVector boundary_pose_neighbor;
-    boundary_pose_radius.reserve(boundary_poses.size());
-    boundary_pose_neighbor.reserve(boundary_poses.size());
-
-    // nearestNeighborRadiusSearch(input_cloud_, boundary_poses, boundary_pose_radius, search_radius_);
-    nearestNNeighborSearch(input_cloud_, boundary_poses, boundary_pose_neighbor, number_of_neighbors_);
-
-    // 2) Narrow down the radius points at each pose to only lie on the x-y plane of the pose with some error.
-    PointCloudVector refined_boundary_pose_radius;
-    PointCloudVector refined_boundary_pose_neighbor;
-
-    refined_boundary_pose_radius.reserve(boundary_poses.size());
-    refined_boundary_pose_neighbor.reserve(boundary_poses.size());
-
-    // refineNeighborPoints(boundary_poses, boundary_pose_radius, refined_boundary_pose_radius);
-    refineNeighborPoints(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor);
-
-    // 3) Find all points that are boundaries.
-    PointCloudBoundaryVector radius_boundary;
-    PointCloudBoundaryVector neighbor_boundary;
-
-    radius_boundary.reserve(boundary_poses.size());
-    neighbor_boundary.reserve(boundary_poses.size());
-    
-    // computeBoundaryForRefinedCloud(refined_boundary_pose_radius, radius_boundary, boundary_search_radius_);
-    computeBoundaryForRefinedCloud(refined_boundary_pose_neighbor, neighbor_boundary, boundary_search_radius_);
-
-    PointCloudVector radius_boundary_points;
-    PointCloudVector neighbor_boundary_points;
-
-    radius_boundary_points.reserve(boundary_poses.size());
-    neighbor_boundary_points.reserve(boundary_poses.size());
-
-    // extractBoundaryPointsFromPointCloud(refined_boundary_pose_radius, radius_boundary, radius_boundary_points);
-    extractBoundaryPointsFromPointCloud(refined_boundary_pose_neighbor, neighbor_boundary, neighbor_boundary_points);
-
-    // 4) Find the boundary point that is closest to the original.
-    PointVector radius_new_pose_points;
-    PointVector neighbor_new_pose_points;
-
-    radius_new_pose_points.reserve(boundary_poses.size());
-    neighbor_new_pose_points.reserve(boundary_poses.size());
-
-    // calculateClosestPointInBoundaryToPose(boundary_poses, radius_boundary_points, radius_new_pose_points);
-    calculateClosestPointInBoundaryToPose(boundary_poses, neighbor_boundary_points, neighbor_new_pose_points);
-
-    // 5) Find any outliers in the new pose points (new points that jump too far).
-    std::map<int, int> outlier_index; // Pose Number, Number of Points to Add
-    calculateOutliersInNewPosePoints(neighbor_new_pose_points, outlier_index);
-
-    // 6) Determines the boundary points that follow the shortest distance between the poses of the two outliers.
-    std::map<int, PointVector> additional_poses;
-    calculateAdditionalPosesRequiredToFillGaps(neighbor_boundary_points, neighbor_new_pose_points, outlier_index, additional_poses);
-
-    // 7) Move original boundary pose point to new point while keeping same orientation
-    // movePoseToNewPoint(boundary_poses, radius_new_pose_points, refined_poses);
-    movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
-
-    if (debug_display_)
-    {
-      debugDisplay(boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor, 
-                   neighbor_boundary_points, neighbor_new_pose_points, refined_poses, additional_poses);
-    }
-
-    // 8) Determine the indices at whcih to add the additional poses and add in additional poses to the refined poses
-    addAdditionalPosesToRefinedPoses(boundary_poses, additional_poses, refined_poses);
-
-    // Debug Check
-    #if 0
-    for (std::size_t i = 0; i < refined_poses.size(); i++)
-    {
-      std::cout << refined_poses[i] << std::endl;
-    }
-    #endif
-
-    #if 0
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      std::cout << std::endl << "Boundary Pose Number: " << i << std::endl;
-
-      std::cout << "(Radius Search) Number of Neighbors: " << boundary_pose_radius[i].width << std::endl;
-      std::cout << "(Radius Search) Number of Refined Neighbors: " << refined_boundary_pose_radius[i].width << std::endl;
-      std::cout << "(Radius Search) Number of Boundary Solutions: " << radius_boundary[i].width << std::endl;
-      std::cout << "(Radius Search) Number of Boundary Points: " << radius_boundary_points[i].width << std::endl;
-
-      std::cout << "(N-Neighbor Search) Number of Neighbors: " << boundary_pose_neighbor[i].width << std::endl;
-      std::cout << "(N-Neighbor Search) Number of Refined Neighbors: " << refined_boundary_pose_neighbor[i].width << std::endl;  
-      std::cout << "(N-Neighbor Search) Number of Boundary Solutions: " << neighbor_boundary[i].width << std::endl;  
-      std::cout << "(N-Neighbor Search) Number of Boundary Points: " << neighbor_boundary_points[i].width << std::endl;
-
-      std::cout << std::endl;        
-    }
-    #endif
-  }
 
   static float 
   maxValueOfVector(std::vector<float> &vec)
@@ -1264,12 +1174,12 @@ private:
   int edge_direction_;
 
   float boundary_search_radius_;
-  float search_radius_;
   int number_of_neighbors_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr visual_cloud_;
 
   std::size_t current_pose_index_;
   std::size_t num_poses_;
 };
+
 } // namespace godel_scan_tools
 #endif // EDGE_REFINEMENT_H

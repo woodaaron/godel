@@ -96,7 +96,6 @@ class SurfaceSegmentation
     normals_ =  pcl::PointCloud<pcl::Normal>::Ptr(new pcl::PointCloud<pcl::Normal>);
     setInputCloud(icloud);
     removeNans();
-    computeNormals();
   }
 
   /** @brief sets the background cloud, replaces whatever points exists if any

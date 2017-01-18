@@ -41,19 +41,6 @@ typedef Eigen::Matrix<float, 1, 3> PoseOrigin;
  */
 struct DebugDisplayData
 {
-  bool rendered_additional_shapes_;
-  std::size_t rendered_shape_count_;
-  std::size_t current_pose_index_;
-  std::size_t num_poses_;
-  pcl::visualization::PCLVisualizer *viewer_;
-
-  EigenPoseMatrix boundary_poses_;
-  PointCloudVector boundary_pose_neighbor_;
-  PointCloudVector refined_boundary_pose_neighbor_;
-  PointCloudVector neighbor_boundary_points_;
-  PointVector new_pose_points_;
-  std::map<int, PointVector> additional_poses_;
-
   /**
    * @brief      Constructor for DebugDisplayData.
    *
@@ -75,6 +62,20 @@ struct DebugDisplayData
                    const PointCloudVector neighbor_boundary_points,
                    const PointVector new_pose_points,
                    const std::map<int, PointVector> additional_poses);
+
+  bool rendered_additional_shapes_;
+  std::size_t rendered_shape_count_;
+  std::size_t current_pose_index_;
+  std::size_t num_poses_;
+  pcl::visualization::PCLVisualizer *viewer_;
+
+  EigenPoseMatrix boundary_poses_;
+  PointCloudVector boundary_pose_neighbor_;
+  PointCloudVector refined_boundary_pose_neighbor_;
+  PointCloudVector neighbor_boundary_points_;
+  PointVector new_pose_points_;
+  std::map<int, PointVector> additional_poses_;
+
 };
 
 /**
@@ -194,7 +195,6 @@ private:
                                      const int &number_of_neighbors,
                                      PointCloudVector &boundary_pose_neighbor);
 
-
   /**
    * @brief      Iterates through a vector of boundary poses and creates a point cloud of each pose 
    *             by finding the nearest points within a search radius.
@@ -209,6 +209,187 @@ private:
                                           const EigenPoseMatrix &boundary_poses,
                                           const float &search_radius,
                                           PointCloudVector &boundary_pose_neighbors);
+
+  /**
+   * @brief      Calculates the standard deviation given a vector of deviations.
+   *
+   * @param[in]  deviations  Vector of the deviations of a point from a plane.
+   *
+   * @return     The allowed deviation.
+   */
+  static float calculateAllowedDeviation(const std::vector<float> &deviations);
+
+  /**
+   * @brief      Calculates the result of a plane if the plane is: a*x + b*y + c*z = d
+   *
+   * @param[in]  x     x - point
+   * @param[in]  y     y - point
+   * @param[in]  z     z - point
+   * @param[in]  a     a - coefficient
+   * @param[in]  b     b - coefficient
+   * @param[in]  c     c - coefficient
+   * @param[in]  d     d - coefficient
+   *
+   * @return     a*x + b*y + c*z - d = return
+   */
+  static float calculatePlane(const float &x, const float &y, const float &z, 
+                              const float &a, const float &b, const float &c, const float &d);
+
+  /**
+   * @brief      Given a vector of boundary poses and the point cloud at each pose,
+   *             this function will refine the point clouds by removing the points that
+   *             do not lie within the plane of the original pose within some tolerance.
+   *             
+   * @details    Given a point A = (Ax, Ay, Az), a normal vector at A, N = <Nx, Ny, Nz>,
+   *             and a random point on the plane P = (Px, Py, Pz).
+   *             
+   *             To check if a point is in a plane:
+   *             We know that the dot product between the vector AP and N should equal
+   *             zero since they are orthogonal.
+   *             
+   *             dot(P-A, N) = 0 -> dot(P,N) - dot(A,N) = 0 -> dot(P,N) = dot(A,N)
+   *             Since A and N are known, substitute values for P to check if it is on the plane.
+   *             
+   *             This function also calculates the deviation from the plane of all
+   *             points in the point cloud. Then it calculates the standard deviation
+   *             of the deviations to determine an allowed error.
+   *             
+   *             If the points in the point cloud fall within this allowed error, the 
+   *             point is added into the refined cloud.                        
+   *
+   * @param[in]  boundary_poses                  The original boundary poses
+   * @param[in]  boundary_pose_neighbor          The vector of point clouds within N neighbors
+   * @param      refined_boundary_pose_neighbor  The vector of point clouds within plane
+   */
+  static void refineNeighborPoints(const EigenPoseMatrix &boundary_poses,
+                                   const PointCloudVector &boundary_pose_neighbor,
+                                   PointCloudVector &refined_boundary_pose_neighbor);
+
+  /**
+   * @brief      Calculates the normals for a point cloud.
+   *
+   * @param[in]  input_cloud  The input cloud
+   * @param      normals      The point cloud of normals
+   */
+  static void computeNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, 
+                             pcl::PointCloud<pcl::Normal> &normals);
+
+  /**
+   * @brief      Calculates the indicies of boundary points for each point cloud
+   *             given a vector of point clouds.
+   *
+   * @param[in]  refined_cloud           The vector of refined point clouds at each pose
+   * @param      boundary_search_radius  The search radius for PCL's boundary estimation
+   * @param[in]  refined_boundary        The vector of boundary indices for each pose
+   */
+  static void computeBoundaryForRefinedCloud(const PointCloudVector &refined_cloud,
+                                             const float boundary_search_radius,
+                                             PointCloudBoundaryVector &refined_boundary);
+
+  /**
+   * @brief      { function_description }
+   *
+   * @param[in]  refined_points_cloud  The refined points cloud
+   * @param[in]  boundary_cloud        The boundary cloud
+   * @param      boundary_points       The boundary points
+   */
+  static void extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
+                                           const PointCloudBoundaryVector &boundary_cloud,
+                                           PointCloudVector &boundary_points);
+
+  static bool
+  checkIfPointsAreEqual(const pcl::PointXYZ &point_a, const pcl::PointXYZ &point_b);
+  // {
+  //   if (point_a.x == point_b.x && point_a.y == point_b.y && point_a.z == point_b.z)
+  //   {
+  //     return true;
+  //   }
+  //   else { return false; }
+  // }
+
+  // This only works for things that go in a circle.
+  static pcl::PointCloud<pcl::PointXYZ>
+  defineOrderForPointCloud(const pcl::PointCloud<pcl::PointXYZ> &point_cloud);
+  // {
+  //   pcl::PointCloud<pcl::PointXYZ> unordered_point_cloud;
+  //   unordered_point_cloud.reserve(point_cloud.size());
+  //   pcl::PointCloud<pcl::PointXYZ> ordered_point_cloud;
+  //   ordered_point_cloud.reserve(point_cloud.size());
+
+  //   unordered_point_cloud = point_cloud;
+  //   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+
+
+
+  //   #if 1
+  //   // Safe Method
+  //   int K = 2;
+  //   std::size_t i = 0;
+  //   pcl::PointXYZ searchpoint = point_cloud.points[i];
+  //   std::vector<int> pointIdxNKNSearch(K);
+  //   std::vector<float> pointNKNSquaredDistance(K);
+  //   ordered_point_cloud.push_back(searchpoint);
+
+
+
+  //   for (std::size_t j = 0; j < point_cloud.points.size() - 1; j++)
+  //   {
+  //     kdtree.setInputCloud(unordered_point_cloud.makeShared());
+  //     if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+  //     {
+  //       searchpoint = unordered_point_cloud.points[pointIdxNKNSearch[1]];
+  //       ordered_point_cloud.push_back(searchpoint);
+  //       unordered_point_cloud.points.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
+  //     }
+  //   }
+  //   #endif
+
+
+
+  //   #if 0
+  //   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
+  //   viewer->setBackgroundColor (0, 0, 0);
+  //   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
+  //   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
+  //   viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
+  //   viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
+  //   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
+  //   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
+
+  //   for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
+  //   {
+  //     std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
+  //     std::string shape_name = "shape_" + std::to_string(i);
+  //     viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
+  //   }
+  //   // viewer->removeShape("asdf");
+
+  //   while (!viewer->wasStopped ())
+  //   {
+  //     viewer->spinOnce (100);
+  //     boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+  //   }
+  //   #endif
+
+  //   return ordered_point_cloud;
+  // }
+
+  static std::vector<float>
+  getRGB(float intensity);
+  // {
+  //   std::vector<float> rgb_vals;
+  //   rgb_vals.reserve(3);
+  //   rgb_vals.push_back(((255*intensity)/100)/255);
+  //   rgb_vals.push_back(((255*(100-intensity))/100)/255);
+  //   rgb_vals.push_back(0);
+  //   return rgb_vals;
+  // }
+
+  static float 
+  mapIntensity(float x, float in_min, float in_max, float out_min, float out_max);
+  // {
+  //   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  // }
 
 
 public:
@@ -266,359 +447,13 @@ public:
 
 
 
-  /*
-      a*x + b*y + c*z = d
-  */
-  static float
-  calculatePlane(const float &x, const float &y, const float &z, 
-                 const float &a, const float &b, const float &c, 
-                 const float &d)
-  {
-    return ((a*x + b*y + c*z) - d);
-  }
 
-  /* 
-      To check if a point is in a plane:
-      normal.x * x + normal.y * y + normal.z * z = origin dot normal
-      normal.x * x + normal.y * y + normal.z * z - (origin dot normal) = 0 
-  */
-  static void 
-  refineNeighborPoints(const EigenPoseMatrix &boundary_poses,
-                       const PointCloudVector &boundary_pose_neighbor,
-                       PointCloudVector &refined_boundary_pose_neighbor)
-  {
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    { 
-      NormalVector normal;
-      PoseOrigin pose_origin;
 
-      std::vector<float> deviations;
-      deviations.reserve(boundary_pose_neighbor[i].size());      
 
-      normal(0, 0) = boundary_poses[i](0, 2);
-      normal(0, 1) = boundary_poses[i](1, 2);
-      normal(0, 2) = boundary_poses[i](2, 2);
 
-      pose_origin(0, 0) = boundary_poses[i](0, 3);
-      pose_origin(0, 1) = boundary_poses[i](1, 3);
-      pose_origin(0, 2) = boundary_poses[i](2, 3);
 
-      float a = normal(0, 0);
-      float b = normal(0, 1);
-      float c = normal(0, 2);
 
-      float dot_product = pose_origin.dot(normal);
 
-      // Calcualtes the deviation of the nearby points from the plane.
-      for (std::size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
-      {
-        float x = boundary_pose_neighbor[i].points[j].x;
-        float y = boundary_pose_neighbor[i].points[j].y;
-        float z = boundary_pose_neighbor[i].points[j].z;
-
-        float plane = calculatePlane(a, b, c, x, y, z, dot_product);
-        deviations.push_back(std::abs(plane));        
-      }
-
-      float allowed_error = calculateAllowedDeviation(deviations);
-
-      pcl::PointCloud<pcl::PointXYZ> temp_cloud;
-
-      for (std::size_t j = 0; j < boundary_pose_neighbor[i].size(); j++)
-      {
-        float x = boundary_pose_neighbor[i].points[j].x;
-        float y = boundary_pose_neighbor[i].points[j].y;
-        float z = boundary_pose_neighbor[i].points[j].z;
-
-        float plane = calculatePlane(a, b, c, x, y, z, dot_product);
-
-        if (plane <= allowed_error && plane >= -allowed_error)
-        {
-          temp_cloud.push_back(boundary_pose_neighbor[i].points[j]);
-        }
-      }
-
-      refined_boundary_pose_neighbor.push_back(temp_cloud);
-    }
-  }
-
-  // Calcualtes standard deviation of the deviations.
-  static float 
-  calculateAllowedDeviation(const std::vector<float> &deviations)
-  {
-    float allowed_deviation;
-
-    float sum = std::accumulate(deviations.begin(), deviations.end(), 0.0);
-    float mean = sum / deviations.size();
-
-    std::vector<float> diff(deviations.size());
-    std::transform(deviations.begin(), deviations.end(), diff.begin(), [mean](double x) { return x - mean; });
-    float sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-    float stdev = std::sqrt(sq_sum / deviations.size());
-
-    allowed_deviation = stdev;
-
-    return allowed_deviation;
-  }
-
-  static void
-  computeNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::Normal> &normals)
-  {
-    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normal_estimation;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-
-    normal_estimation.setInputCloud(input_cloud);
-    normal_estimation.setSearchMethod(tree);
-    normal_estimation.setKSearch(5);
-    normal_estimation.compute(normals);
-  }
-
-  static void
-  computeBoundaryForRefinedCloud(const PointCloudVector &refined_cloud,
-                                 PointCloudBoundaryVector &refined_boundary,
-                                 const float boundary_search_radius)
-  {
-
-#if 1
-    refined_boundary.resize(refined_cloud.size());
-    
-    #pragma omp parallel for
-    for (std::size_t i = 0; i < refined_cloud.size(); i++)
-    {
-      pcl::PointCloud<pcl::Boundary> boundaries;
-      pcl::PointCloud<pcl::Normal> normals;
-      
-      /*
-      boundaries.clear();
-      normals.clear();
-      */
-
-      computeNormals(refined_cloud[i].makeShared(), normals);
-
-      pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
-      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-
-      boundary_estimation.setInputCloud(refined_cloud[i].makeShared());
-      boundary_estimation.setInputNormals(normals.makeShared());
-      boundary_estimation.setRadiusSearch(boundary_search_radius);
-      boundary_estimation.setSearchMethod(tree);
-      boundary_estimation.setAngleThreshold(90.0 * 3.14 / 180.0); // Defaults to PI/2 according to the documentation...
-      boundary_estimation.compute(boundaries);
-
-      refined_boundary[i] = boundaries;
-    }
-#endif
-
-#if 0 
-    //OLD WAY
-    refined_boundary.reserve(refined_cloud.size());
-    for (std::size_t i = 0; i < refined_cloud.size(); i++)
-    {
-      pcl::PointCloud<pcl::Boundary> boundaries;
-      pcl::PointCloud<pcl::Normal> normals;
-      // boundaries.clear();
-      // normals.clear();
-      computeNormals(refined_cloud[i].makeShared(), normals);
-
-      pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> boundary_estimation;
-      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-
-      boundary_estimation.setInputCloud(refined_cloud[i].makeShared());
-      boundary_estimation.setInputNormals(normals.makeShared());
-      boundary_estimation.setRadiusSearch(boundary_search_radius);
-      boundary_estimation.setSearchMethod(tree);
-      boundary_estimation.setAngleThreshold(90.0 * 3.14 / 180.0); // Defaults to PI/2 according to the documentation...
-      boundary_estimation.compute(boundaries);
-
-      refined_boundary.push_back(boundaries);
-    }
-#endif
-  }
-
-  static bool
-  checkIfPointsAreEqual(const pcl::PointXYZ &point_a, const pcl::PointXYZ &point_b)
-  {
-    if (point_a.x == point_b.x && point_a.y == point_b.y && point_a.z == point_b.z)
-    {
-      return true;
-    }
-    else { return false; }
-  }
-
-  // This only works for things that go in a circle.
-  static pcl::PointCloud<pcl::PointXYZ>
-  defineOrderForPointCloud(const pcl::PointCloud<pcl::PointXYZ> &point_cloud)
-  {
-    pcl::PointCloud<pcl::PointXYZ> unordered_point_cloud;
-    unordered_point_cloud.reserve(point_cloud.size());
-    pcl::PointCloud<pcl::PointXYZ> ordered_point_cloud;
-    ordered_point_cloud.reserve(point_cloud.size());
-
-    unordered_point_cloud = point_cloud;
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-
-    #if 0
-    // Unsafe Method
-    std::size_t i = 0;
-    pcl::PointXYZ searchpoint = point_cloud.points[i];
-    pcl::PointXYZ prev_searchpoint;
-
-    kdtree.setInputCloud(point_cloud.makeShared());
-    std::vector<int> pointIdxNKNSearch_sing(1);
-    std::vector<int> pointIdxNKNSearch_mult(2);
-    std::vector<float> pointNKNSquaredDistance_sing(1);
-    std::vector<float> pointNKNSquaredDistance_mult(2);      
-
-    ordered_point_cloud.push_back(searchpoint);
-    while (i < (point_cloud.size() - 1))
-    {
-      if (i == 0)
-      {
-        if (kdtree.nearestKSearch(searchpoint, 2, pointIdxNKNSearch_sing, pointNKNSquaredDistance_sing) > 0)
-        {
-          prev_searchpoint = searchpoint;
-          searchpoint = point_cloud.points[pointIdxNKNSearch_sing[1]];
-          ordered_point_cloud.push_back(searchpoint);
-        }
-      }
-      else
-      {
-        if (kdtree.nearestKSearch(searchpoint, 3, pointIdxNKNSearch_mult, pointNKNSquaredDistance_mult) > 0)
-        {
-          //if (point_cloud.points[pointIdxNKNSearch_mult[0]] == prev_searchpoint)
-          if (checkIfPointsAreEqual(point_cloud.points[pointIdxNKNSearch_mult[1]], prev_searchpoint))
-          {
-            prev_searchpoint = searchpoint;
-            searchpoint = point_cloud.points[pointIdxNKNSearch_mult[2]];
-            ordered_point_cloud.push_back(searchpoint);
-          }
-          else
-          {
-            prev_searchpoint = searchpoint;
-            searchpoint = point_cloud.points[pointIdxNKNSearch_mult[1]];
-            ordered_point_cloud.push_back(searchpoint);
-          }
-        }
-      }
-      i++;
-    }
-    #endif
-
-    #if 1
-    // Safe Method
-    int K = 2;
-    std::size_t i = 0;
-    pcl::PointXYZ searchpoint = point_cloud.points[i];
-    std::vector<int> pointIdxNKNSearch(K);
-    std::vector<float> pointNKNSquaredDistance(K);
-    ordered_point_cloud.push_back(searchpoint);
-
-    /*
-    while (i < (unordered_point_cloud.size() - 1))
-    {
-      kdtree.setInputCloud(unordered_point_cloud.makeShared());
-      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-      {
-        unordered_point_cloud.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
-        searchpoint = unordered_point_cloud[1];
-        ordered_point_cloud.push_back(searchpoint);
-        i++;
-      }
-    }
-    */
-
-    for (std::size_t j = 0; j < point_cloud.points.size() - 1; j++)
-    {
-      kdtree.setInputCloud(unordered_point_cloud.makeShared());
-      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-      {
-        searchpoint = unordered_point_cloud.points[pointIdxNKNSearch[1]];
-        ordered_point_cloud.push_back(searchpoint);
-        unordered_point_cloud.points.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
-      }
-    }
-    #endif
-
-    //if (point_cloud.size() == ordered_point_cloud.size()) { std::cout << "The clouds are the same size!" << std::endl; }
-    // std::cout << "Original Boundary Cloud " << "New Boundary Cloud" << std::endl;
-    // for (std::size_t i = 0; i < point_cloud.size(); i++)
-    // {
-    //   std::cout << point_cloud.points[i] << " : " << ordered_point_cloud.points[i] << std::endl;
-    // }
-
-    #if 0
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
-    viewer->setBackgroundColor (0, 0, 0);
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
-    viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
-    viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
-
-    for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
-    {
-      std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
-      std::string shape_name = "shape_" + std::to_string(i);
-      viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
-    }
-    // viewer->removeShape("asdf");
-
-    while (!viewer->wasStopped ())
-    {
-      viewer->spinOnce (100);
-      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-    }
-    // Temp Debug
-
-    //std::cout << "unordered size: " << point_cloud.points.size() << std::endl;
-    //std::cout << "ordered size: " << ordered_point_cloud.points.size() << std::endl;
-    #endif
-
-    return ordered_point_cloud;
-  }
-
-  static std::vector<float>
-  getRGB(float intensity)
-  {
-    std::vector<float> rgb_vals;
-    rgb_vals.reserve(3);
-    rgb_vals.push_back(((255*intensity)/100)/255);
-    rgb_vals.push_back(((255*(100-intensity))/100)/255);
-    rgb_vals.push_back(0);
-    return rgb_vals;
-  }
-
-  static float 
-  mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
-  {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-  }
-
-  static void
-  extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
-                                      const PointCloudBoundaryVector &boundary_cloud,
-                                      PointCloudVector &boundary_points)
-  {
-    pcl::PointCloud<pcl::PointXYZ> temp_cloud;
-
-    for (std::size_t i = 0; i < refined_points_cloud.size(); i++)
-    {
-      temp_cloud.clear();
-      int k = 0;
-      for (const auto &pt : boundary_cloud[i].points)
-      {
-        if (pt.boundary_point)
-        {
-          temp_cloud.push_back(refined_points_cloud[i].points[k]);
-        }
-
-        k++;
-      }
-
-      boundary_points.push_back(defineOrderForPointCloud(temp_cloud));
-    }     
-  }
 
 
 

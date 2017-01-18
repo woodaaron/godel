@@ -158,7 +158,7 @@ main (int argc, char** av)
   if(pcl::console::find_switch(argc, av, "-meters"))
   {
     SS.setSearchRadius(.03);
-    ee_search_radius = 0.005;
+    ee_search_radius = 0.01;
   }
   else
   {

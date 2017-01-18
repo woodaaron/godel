@@ -321,6 +321,7 @@ public:
 
 #if 1
     refined_boundary.resize(refined_cloud.size());
+    
     #pragma omp parallel for
     for (std::size_t i = 0; i < refined_cloud.size(); i++)
     {
@@ -609,11 +610,11 @@ public:
 
       if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
       {
-        for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
+        //for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
         {
-          temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].x;
-          temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].y;
-          temp_point.z = extracted_boundary_points[i].points[pointIdxNKNSearch[j]].z;
+          temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].x;
+          temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].y;
+          temp_point.z = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].z;
         }
 
         new_pose_points.push_back(temp_point);
@@ -752,7 +753,7 @@ public:
     pose_point.y = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](1, 3);
     pose_point.z = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](2, 3);
     // Pose Point
-    debug_display_data->viewer_->addSphere(pose_point, 2.5, 1.0, 0.0, 0.0, "pose point");
+    debug_display_data->viewer_->addSphere(pose_point, 0.001*2.5, 1.0, 0.0, 0.0, "pose point");
     // Points within certain radius or K neighbors
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_1(debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), 0, 255, 0);
     debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_1, "nearest N neighbors");
@@ -766,7 +767,7 @@ public:
     debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), single_color_3, "Boundary Points");
     debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1.5, "Boundary Points");
     // New Point
-    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 2.5, 0.0, 1.0, 0.0, "new point");
+    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 0.001*2.5, 0.0, 1.0, 0.0, "new point");
 
     for (std::map<int, PointVector>::const_iterator it = debug_display_data->additional_poses_.begin();
          it != debug_display_data->additional_poses_.end(); it++)
@@ -778,9 +779,9 @@ public:
           std::string additional_name = "additional_pose_" + std::to_string(i);
           // Might be able to remove this.
           if (i == it->second.size()-1)
-            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
+            debug_display_data->viewer_->addSphere(it->second[i], 0.001*2.5, 0.0, 1.0, 0.0, additional_name);
           else
-            debug_display_data->viewer_->addSphere(it->second[i], 2.5, 0.0, 1.0, 0.0, additional_name);
+            debug_display_data->viewer_->addSphere(it->second[i], 0.001*2.5, 0.0, 1.0, 0.0, additional_name);
         }
         debug_display_data->rendered_shape_count_ = it->second.size();
         debug_display_data->rendered_additional_shapes_ = true;
@@ -871,7 +872,7 @@ public:
                                   const float &standard_deviation)
   {
     int number_of_points = round(distance_between_points / standard_deviation);
-    return round(2*(number_of_points - 2)); // -2 because of the original two points.
+    return round(1.5*(number_of_points - 2)); // -2 because of the original two points.
   }
 
   static void

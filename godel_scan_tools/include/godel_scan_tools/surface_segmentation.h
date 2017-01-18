@@ -159,7 +159,7 @@ class SurfaceSegmentation
     pcl::RegionGrowing<pcl::PointXYZ, pcl::Normal> rg;
 
     rg.setSmoothModeFlag (false); // Depends on the cloud being processed
-    rg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);
+    rg.setSmoothnessThreshold (15.0 / 180.0 * M_PI);
     rg.setMaxClusterSize(MAX_CLUSTER_SIZE);
     rg.setSearchMethod (tree);
     rg.setMinClusterSize(MIN_CLUSTER_SIZE);

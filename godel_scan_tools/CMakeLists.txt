@@ -122,6 +122,7 @@ include_directories(
 
 add_library(edge_refinement src/edge_refinement.cpp)
 target_link_libraries(edge_refinement ${catkin_LIBRARIES})
+target_compile_options(edge_refinement PRIVATE ${OpenMP_FLAGS})
 
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})

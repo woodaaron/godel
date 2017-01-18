@@ -34,7 +34,6 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
   visual_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   current_pose_index_ = 0;
   debug_display_ = false;
-  getPointDensity();
 }
 
   void 
@@ -55,7 +54,7 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     boundary_pose_radius.reserve(boundary_poses.size());
     boundary_pose_neighbor.reserve(boundary_poses.size());
 
-    nearestNNeighborSearch(input_cloud_, boundary_poses, boundary_pose_neighbor, number_of_neighbors_);
+    nearestNNeighborSearch(input_cloud_, boundary_poses, number_of_neighbors_, boundary_pose_neighbor);
 
     // 2) Narrow down the radius points at each pose to only lie on the x-y plane of the pose with some error.
     PointCloudVector refined_boundary_pose_radius;
@@ -139,6 +138,37 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     }
   }
 
+  void 
+  EdgeRefinement::nearestNNeighborSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                         const EigenPoseMatrix &boundary_poses,
+                                         const int number_of_neighbors,
+                                         PointCloudVector &boundary_pose_neighbor)
+                         
+  {
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    kdtree.setInputCloud(input_cloud);
 
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      std::vector<int> pointIdxNKNSearch(number_of_neighbors);
+      std::vector<float> pointNKNSquaredDistance(number_of_neighbors);
+
+      pcl::PointXYZ searchpoint;
+      searchpoint.x = boundary_poses[i](0, 3);
+      searchpoint.y = boundary_poses[i](1, 3);
+      searchpoint.z = boundary_poses[i](2, 3);
+
+      pcl::PointCloud<pcl::PointXYZ> temp_cloud;
+      if (kdtree.nearestKSearch(searchpoint, number_of_neighbors, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+      {
+        for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
+        {
+          temp_cloud.push_back(input_cloud->points[pointIdxNKNSearch[j]]);
+        }
+      }
+
+      boundary_pose_neighbor.push_back(temp_cloud);
+    }
+  }
 
 } // namespace godel_scan_tools

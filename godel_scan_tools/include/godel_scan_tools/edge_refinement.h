@@ -144,14 +144,14 @@ public:
   int getNumberOfNeighbors(void) { return number_of_neighbors_; }
 
   /**
-   * @brief      Sets the debug display.
+   * @brief      Sets the debug display this requires the user to also set the visual cloud.
    *
    * @param[in]  debug_display  The debug display
    */
   void setDebugDisplay(bool debug_display) { if (debug_display) { debug_display_ = true; } }
   
   /**
-   * @brief      Sets the visual cloud.
+   * @brief      Sets the visual cloud if debug display is enabled.
    *
    * @param[in]  colored_cloud_ptr  The colored cloud pointer
    */
@@ -172,7 +172,7 @@ private:
   static bool containsNaNs(Eigen::Matrix4f matrix);
 
   /**
-   * @brief      Removes all NaNs from a pose trajectory.
+   * @brief      Iterates through a vector of poses and remove all NaN's
    *
    * @param[in]  original_boundary_poses  The original boundary poses
    * @param      boundary_poses_no_nan    The boundary poses no nan
@@ -180,7 +180,18 @@ private:
   static void removeNaNFromPoseTrajectory(const EigenPoseMatrix &original_boundary_poses,
                                           EigenPoseMatrix &boundary_poses_no_nan);
 
-
+  /**
+   * @brief      Iterates
+   *
+   * @param[in]  input_cloud             The input cloud
+   * @param[in]  boundary_poses          The boundary poses
+   * @param[in]  number_of_neighbors     The number of neighbors
+   * @param      boundary_pose_neighbor  The boundary pose neighbor
+   */
+  static void nearestNNeighborSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                     const EigenPoseMatrix &boundary_poses,
+                                     const int number_of_neighbors,
+                                     PointCloudVector &boundary_pose_neighbor);
 
 public:
 
@@ -265,37 +276,7 @@ public:
     }
   }
 
-  static void 
-  nearestNNeighborSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                         const EigenPoseMatrix &boundary_poses,
-                         PointCloudVector &boundary_pose_neighbor,
-                         const int n)
-  {
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    kdtree.setInputCloud(input_cloud);
 
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      std::vector<int> pointIdxNKNSearch(n);
-      std::vector<float> pointNKNSquaredDistance(n);
-
-      pcl::PointXYZ searchpoint;
-      searchpoint.x = boundary_poses[i](0, 3);
-      searchpoint.y = boundary_poses[i](1, 3);
-      searchpoint.z = boundary_poses[i](2, 3);
-
-      pcl::PointCloud<pcl::PointXYZ> temp_cloud;
-      if (kdtree.nearestKSearch(searchpoint, n, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-      {
-        for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
-        {
-          temp_cloud.push_back(input_cloud->points[pointIdxNKNSearch[j]]);
-        }
-      }
-
-      boundary_pose_neighbor.push_back(temp_cloud);
-    }
-  }
 
   /*
       a*x + b*y + c*z = d

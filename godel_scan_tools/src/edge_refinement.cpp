@@ -144,9 +144,12 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
                                          const int &number_of_neighbors,
                                          PointCloudVector &boundary_pose_neighbor)             
   {
+    boundary_pose_neighbor.resize(boundary_poses.size());
+
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(input_cloud);
 
+    #pragma omp parallel for
     for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::vector<int> pointIdxNKNSearch(number_of_neighbors);
@@ -166,7 +169,7 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
         }
       }
 
-      boundary_pose_neighbor.push_back(temp_cloud);
+      boundary_pose_neighbor[i] = temp_cloud;
     }
   }
 
@@ -176,9 +179,12 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
                                               const float &search_radius,
                                               PointCloudVector &boundary_pose_neighbors)
   {
+    boundary_pose_neighbors.resize(boundary_poses.size());
+
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(input_cloud);
 
+    #pragma omp parallel for
     for (std::size_t i = 0; i < boundary_poses.size(); i++)
     {
       std::vector<int> pointIdxRadiusSearch;
@@ -198,7 +204,7 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
         }
       }
 
-      boundary_pose_neighbors.push_back(temp_cloud);
+      boundary_pose_neighbors[i] = temp_cloud;
     }
   }
 

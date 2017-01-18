@@ -332,31 +332,27 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     }
   }
 
-  bool
-  EdgeRefinement::checkIfPointsAreEqual(const pcl::PointXYZ &point_a, const pcl::PointXYZ &point_b)
+  void
+  EdgeRefinement::extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
+                                      const PointCloudBoundaryVector &boundary_cloud,
+                                      PointCloudVector &boundary_points)
   {
-    if (point_a.x == point_b.x && point_a.y == point_b.y && point_a.z == point_b.z)
+    pcl::PointCloud<pcl::PointXYZ> temp_cloud;
+
+    for (std::size_t i = 0; i < refined_points_cloud.size(); i++)
     {
-      return true;
-    }
-    else { return false; }
-  }
-
-  std::vector<float>
-  EdgeRefinement::getRGB(float intensity)
-  {
-    std::vector<float> rgb_vals;
-    rgb_vals.reserve(3);
-    rgb_vals.push_back(((255*intensity)/100)/255);
-    rgb_vals.push_back(((255*(100-intensity))/100)/255);
-    rgb_vals.push_back(0);
-    return rgb_vals;
-  }
-
-  float 
-  EdgeRefinement::mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
-  {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+      temp_cloud.clear();
+      int k = 0;
+      for (const auto &pt : boundary_cloud[i].points)
+      {
+        if (pt.boundary_point)
+        {
+          temp_cloud.push_back(refined_points_cloud[i].points[k]);
+        }
+        k++;
+      }
+      boundary_points.push_back(defineOrderForPointCloud(temp_cloud));
+    }     
   }
 
   pcl::PointCloud<pcl::PointXYZ>
@@ -391,54 +387,49 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     }
 
     #if 0
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
-    viewer->setBackgroundColor (0, 0, 0);
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
-    viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
-    viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
+      boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
+      viewer->setBackgroundColor (0, 0, 0);
+      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
+      pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
+      viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
+      viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
+      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
+      viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
 
-    for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
-    {
-      std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
-      std::string shape_name = "shape_" + std::to_string(i);
-      viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
-    }
-    // viewer->removeShape("asdf");
+      for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
+      {
+        std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
+        std::string shape_name = "shape_" + std::to_string(i);
+        viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
+      }
 
-    while (!viewer->wasStopped ())
-    {
-      viewer->spinOnce (100);
-      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-    }
+      while (!viewer->wasStopped ())
+      {
+        viewer->spinOnce (100);
+        boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+      }
     #endif
 
     return ordered_point_cloud;
   }
-
-  void
-  EdgeRefinement::extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
-                                      const PointCloudBoundaryVector &boundary_cloud,
-                                      PointCloudVector &boundary_points)
+  
+  std::vector<float>
+  EdgeRefinement::getRGB(float intensity)
   {
-    pcl::PointCloud<pcl::PointXYZ> temp_cloud;
-
-    for (std::size_t i = 0; i < refined_points_cloud.size(); i++)
-    {
-      temp_cloud.clear();
-      int k = 0;
-      for (const auto &pt : boundary_cloud[i].points)
-      {
-        if (pt.boundary_point)
-        {
-          temp_cloud.push_back(refined_points_cloud[i].points[k]);
-        }
-        k++;
-      }
-      boundary_points.push_back(defineOrderForPointCloud(temp_cloud));
-    }     
+    std::vector<float> rgb_vals;
+    rgb_vals.reserve(3);
+    rgb_vals.push_back(((255*intensity)/100)/255);
+    rgb_vals.push_back(((255*(100-intensity))/100)/255);
+    rgb_vals.push_back(0);
+    return rgb_vals;
   }
+
+  float 
+  EdgeRefinement::mapIntensity(float x, float in_min, float in_max, float out_min, float out_max)
+  {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  }
+
+
 
 } // namespace godel_scan_tools

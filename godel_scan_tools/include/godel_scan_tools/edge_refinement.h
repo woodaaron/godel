@@ -287,110 +287,67 @@ private:
                                              PointCloudBoundaryVector &refined_boundary);
 
   /**
-   * @brief      { function_description }
+   * @brief      Extracts the boundary points from a point cloud given a vector of clouds
+   *             containing boundary point indices. Results in a vector of ordered point clouds
+   *             of boundary points.
    *
-   * @param[in]  refined_points_cloud  The refined points cloud
-   * @param[in]  boundary_cloud        The boundary cloud
-   * @param      boundary_points       The boundary points
+   * @param[in]  refined_points_cloud  The vector of refined point clouds for each pose
+   * @param[in]  boundary_cloud        The vector of boundary index clouds for each refined pose
+   * @param      boundary_points       The vector of boundary point clouds for each pose
    */
   static void extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
-                                           const PointCloudBoundaryVector &boundary_cloud,
-                                           PointCloudVector &boundary_points);
+                                                  const PointCloudBoundaryVector &boundary_cloud,
+                                                  PointCloudVector &boundary_points);
 
-  static bool
-  checkIfPointsAreEqual(const pcl::PointXYZ &point_a, const pcl::PointXYZ &point_b);
-  // {
-  //   if (point_a.x == point_b.x && point_a.y == point_b.y && point_a.z == point_b.z)
-  //   {
-  //     return true;
-  //   }
-  //   else { return false; }
-  // }
+  /**
+   * @brief      Takes a point cloud of boundary points and orders them. 
+   *             
+   * @details    This function assumes that these boundary clouds contain points that
+   *             form a shape that encloses something, is curved, and is closed.
+   *             
+   *             The algorithm starts with the default first point of the cloud, and calculates the two
+   *             closest points. The first closest point will be itself, and the second closest point will
+   *             be the closest point that is not itself. 
+   *             
+   *             That search point is added to the ordered cloud and removed from the search cloud.
+   *             
+   *             This is repeated until all the points are removed and we are left with
+   *             a ordered point cloud.
+   *             
+   *             This is used in the future to generate trajectories along the boundaries.
+   *             
+   *             Note: This function also contains a visualization tool to check if the boundary
+   *                   points were actually ordered correctly. This tool is disabled by default.
+   *
+   * @param[in]  point_cloud  The unordered point cloud
+   *
+   * @return     The ordered point cloud
+   */
+  static pcl::PointCloud<pcl::PointXYZ> defineOrderForPointCloud(const pcl::PointCloud<pcl::PointXYZ> &point_cloud);
 
-  // This only works for things that go in a circle.
-  static pcl::PointCloud<pcl::PointXYZ>
-  defineOrderForPointCloud(const pcl::PointCloud<pcl::PointXYZ> &point_cloud);
-  // {
-  //   pcl::PointCloud<pcl::PointXYZ> unordered_point_cloud;
-  //   unordered_point_cloud.reserve(point_cloud.size());
-  //   pcl::PointCloud<pcl::PointXYZ> ordered_point_cloud;
-  //   ordered_point_cloud.reserve(point_cloud.size());
+  /**
+   * @brief      Gets a RGB value given an intensity.
+   *
+   * @param[in]  intensity  The intensity
+   *
+   * @return     The rgb.
+   */
+  static std::vector<float> getRGB(float intensity);
 
-  //   unordered_point_cloud = point_cloud;
-  //   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  /**
+   * @brief      Maps the intensity.
+   *
+   * @param[in]  x        The value you want to map
+   * @param[in]  in_min   In minimum
+   * @param[in]  in_max   In maximum
+   * @param[in]  out_min  The out minimum
+   * @param[in]  out_max  The out maximum
+   *
+   * @return     The mapped intensity.
+   */
+  static float mapIntensity(float x, float in_min, float in_max, float out_min, float out_max);
 
-
-
-  //   #if 1
-  //   // Safe Method
-  //   int K = 2;
-  //   std::size_t i = 0;
-  //   pcl::PointXYZ searchpoint = point_cloud.points[i];
-  //   std::vector<int> pointIdxNKNSearch(K);
-  //   std::vector<float> pointNKNSquaredDistance(K);
-  //   ordered_point_cloud.push_back(searchpoint);
-
-
-
-  //   for (std::size_t j = 0; j < point_cloud.points.size() - 1; j++)
-  //   {
-  //     kdtree.setInputCloud(unordered_point_cloud.makeShared());
-  //     if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-  //     {
-  //       searchpoint = unordered_point_cloud.points[pointIdxNKNSearch[1]];
-  //       ordered_point_cloud.push_back(searchpoint);
-  //       unordered_point_cloud.points.erase(unordered_point_cloud.begin() + pointIdxNKNSearch[0]);
-  //     }
-  //   }
-  //   #endif
-
-
-
-  //   #if 0
-  //   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
-  //   viewer->setBackgroundColor (0, 0, 0);
-  //   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
-  //   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> ordered(ordered_point_cloud.makeShared(), 0, 255, 0);
-  //   viewer->addPointCloud<pcl::PointXYZ> (point_cloud.makeShared(), unordered, "unordered cloud");
-  //   viewer->addPointCloud<pcl::PointXYZ> (ordered_point_cloud.makeShared(), ordered, "ordered cloud");
-  //   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "unordered cloud");
-  //   viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ordered cloud");
-
-  //   for (std::size_t i = 0; i < ordered_point_cloud.points.size(); i++)
-  //   {
-  //     std::vector<float> color = getRGB(mapIntensity(i, 0, point_cloud.points.size(), 0, 100));
-  //     std::string shape_name = "shape_" + std::to_string(i);
-  //     viewer->addSphere(ordered_point_cloud.points[i], 1.0, color[0], color[1], color[2], shape_name);
-  //   }
-  //   // viewer->removeShape("asdf");
-
-  //   while (!viewer->wasStopped ())
-  //   {
-  //     viewer->spinOnce (100);
-  //     boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-  //   }
-  //   #endif
-
-  //   return ordered_point_cloud;
-  // }
-
-  static std::vector<float>
-  getRGB(float intensity);
-  // {
-  //   std::vector<float> rgb_vals;
-  //   rgb_vals.reserve(3);
-  //   rgb_vals.push_back(((255*intensity)/100)/255);
-  //   rgb_vals.push_back(((255*(100-intensity))/100)/255);
-  //   rgb_vals.push_back(0);
-  //   return rgb_vals;
-  // }
-
-  static float 
-  mapIntensity(float x, float in_min, float in_max, float out_min, float out_max);
-  // {
-  //   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-  // }
-
+ 
 
 public:
 
@@ -492,30 +449,6 @@ public:
 
         new_pose_points.push_back(temp_point);
       }
-    }
-  }
-
-  static void
-  comparePoints(const EigenPoseMatrix &boundary_poses,
-                const PointVector &radius_new_boundary_points,
-                const PointVector &neighbor_new_boundary_points)
-  {
-    assert(boundary_poses.size() == radius_new_boundary_points.size());
-    assert(boundary_poses.size() == neighbor_new_boundary_points.size());
-
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      std::cout << "Old Boundary Point: " << "x: " << boundary_poses[i](0, 3) 
-                << ", y: " << boundary_poses[i](1, 3) << ", z: " 
-                << boundary_poses[i](2, 3) << std::endl;
-      std::cout << "Radius New Boundary Point: " << "x: " 
-                << radius_new_boundary_points[i].x << ", y: " 
-                << radius_new_boundary_points[i].y 
-                << ", z: " << radius_new_boundary_points[i].z << std::endl;
-      std::cout << "Neighbor New Boundary Point: " << "x: " 
-                << neighbor_new_boundary_points[i].x << ", y: " 
-                << neighbor_new_boundary_points[i].y 
-                << ", z: " << neighbor_new_boundary_points[i].z << std::endl << std::endl;                
     }
   }
 

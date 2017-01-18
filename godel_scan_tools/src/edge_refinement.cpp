@@ -141,9 +141,8 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
   void 
   EdgeRefinement::nearestNNeighborSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
                                          const EigenPoseMatrix &boundary_poses,
-                                         const int number_of_neighbors,
-                                         PointCloudVector &boundary_pose_neighbor)
-                         
+                                         const int &number_of_neighbors,
+                                         PointCloudVector &boundary_pose_neighbor)             
   {
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(input_cloud);
@@ -168,6 +167,38 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
       }
 
       boundary_pose_neighbor.push_back(temp_cloud);
+    }
+  }
+
+  void 
+  EdgeRefinement::nearestNeighborRadiusSearch(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                              const EigenPoseMatrix &boundary_poses,
+                                              const float &search_radius,
+                                              PointCloudVector &boundary_pose_neighbors)
+  {
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    kdtree.setInputCloud(input_cloud);
+
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      std::vector<int> pointIdxRadiusSearch;
+      std::vector<float> pointRadiusSquaredDistance;
+
+      pcl::PointXYZ searchpoint;
+      searchpoint.x = boundary_poses[i](0, 3);
+      searchpoint.y = boundary_poses[i](1, 3);
+      searchpoint.z = boundary_poses[i](2, 3);
+
+      pcl::PointCloud<pcl::PointXYZ> temp_cloud;
+      if (kdtree.radiusSearch(searchpoint, search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
+      {
+        for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); j++)
+        {
+          temp_cloud.push_back(input_cloud->points[pointIdxRadiusSearch[j]]);
+        }
+      }
+
+      boundary_pose_neighbors.push_back(temp_cloud);
     }
   }
 

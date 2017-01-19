@@ -366,6 +366,48 @@ private:
                                  const PointVector &new_boundary_points,
                                  EigenPoseMatrix &refined_poses);
 
+  /**
+   * @brief      Calculates the index of the refined poses where there is a jump larger than some
+   *             prefined threshold.
+   *             
+   *             NOTE: Debug statements have been left in the implementation since this is still in development.
+   *             
+   * @details    The outlier index is the first index of the jump. If the index is 100, the large gap is between poses
+   *             100 and 101.          
+   *
+   * @param[in]  neighbor_new_pose_points  The neighbor new pose points
+   * @param      outlier_index             The outlier index
+   */
+  static void calculateOutliersInNewPosePoints(const PointVector &neighbor_new_pose_points,
+                                               std::map<int, int> &outlier_index);
+  
+  /**
+   * @brief      Calculates the distance between two points given a point vector and the index of the points.
+   *
+   * @param[in]  point_vector  The point vector
+   * @param[in]  index_1       The index 1
+   * @param[in]  index_2       The index 2
+   *
+   * @return     The distance between two points.
+   */
+  static float distanceBetweenTwoPoints(const PointVector &point_vector,
+                                        const int index_1, const int index_2);
+
+  /**
+   * @brief      Calculates the number of points to insert between outliers.
+   *
+   * @param[in]  distance_between_points  The distance between points
+   * @param[in]  standard_deviation       The standard deviation
+   *
+   * @return     The number of points to insert.
+   */
+  static int calculateNumberOfPointsToInsert(const float &distance_between_points,
+                                             const float &standard_deviation);
+ 
+
+
+
+
 
 
 
@@ -575,72 +617,7 @@ public:
     }    
   }
 
-  /*
-      The returned index is the first index of the jump. So if the index is 100, the large jump is
-      between poses 100 and 101.
-  */
-  static float
-  distanceBetweenTwoPoints(const PointVector &point_vector,
-                           const int index_1,
-                           const int index_2)
-  {
-    float diff_x = point_vector[index_1].x - point_vector[index_2].x;
-    float diff_y = point_vector[index_1].y - point_vector[index_2].y;
-    float diff_z = point_vector[index_1].z - point_vector[index_2].z;
 
-    float magnitude = sqrt(diff_x*diff_x + diff_y*diff_y + diff_z*diff_z);
-
-    return magnitude;
-  }
-
-  static int
-  calculateNumberOfPointsToInsert(const float &distance_between_points,
-                                  const float &standard_deviation)
-  {
-    int number_of_points = round(distance_between_points / standard_deviation);
-    return round(1.5*(number_of_points - 2)); // -2 because of the original two points.
-  }
-
-  static void
-  calculateOutliersInNewPosePoints(const PointVector &neighbor_new_pose_points,
-                                   std::map<int, int> &outlier_index)
-  {
-    std::vector<float> difference_between_poses;
-    for (std::size_t i = 1; i < neighbor_new_pose_points.size(); i++)
-    {
-      float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, i, i-1);
-     
-      if (magnitude != 0.0)
-      {
-        difference_between_poses.push_back(magnitude);
-      }
-    }
-
-    float sum = std::accumulate(difference_between_poses.begin(), difference_between_poses.end(), 0.0);
-    float mean = sum / difference_between_poses.size();
-    float standard_deviation = calculateAllowedDeviation(difference_between_poses);
-
-    std::cout << "Mean: " << mean << std::endl;
-    std::cout << "Deviation: " << standard_deviation << std::endl;
-    std::cout << "Max Deviation: " << maxValueOfVector(difference_between_poses) << std::endl;
-
-    for (std::size_t i = 1; i < neighbor_new_pose_points.size(); i++)
-    {
-      float magnitude = distanceBetweenTwoPoints(neighbor_new_pose_points, i, i-1);
-
-      if ((magnitude-3*standard_deviation) >= mean)
-      {
-        std::cout << "Pose: " << (i-1) << " - " << i << " : " << magnitude << std::endl;
-        outlier_index[i-1] = calculateNumberOfPointsToInsert(magnitude, standard_deviation);
-      } 
-    }
-
-    // Debug check
-    for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
-    {
-      std::cout << "Pose: " << it->first << " requires " << it->second << " points." << std::endl;
-    }
-  }
 
   static PointVector
   calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
@@ -852,22 +829,6 @@ public:
       std::cout << "Old Index: " << additional_pose_indices[i] <<
       " Points Added: " << additional_pose_points[i].size() << " New Index: " << new_indices[i] << std::endl;
     }
-  }
-
-
-
-  static float 
-  maxValueOfVector(std::vector<float> &vec)
-  {
-    float max_value = 0;
-    for (std::size_t i = 0; i < vec.size(); i++)
-    {
-      if (vec[i] > max_value)
-      {
-        max_value = vec[i];
-      }
-    }
-    return max_value;
   }
 
 private:

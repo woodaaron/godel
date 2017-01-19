@@ -1,10 +1,6 @@
 /*
     TODO:
-    - Add more comments describing what each section of code is doing.
-    - Move function implementations to separate cpp file.
     - Check ENSENSO scan density and predict the amount of neighbors.
-    - SPEED THIS UP!!!
-    - Add new points to refined_poses and possibly check if order is correct.
     - Add B-Spline Smoother:
       http://stackoverflow.com/questions/25379422/b-spline-curves
       http://kluge.in-chemnitz.de/opensource/spline/
@@ -347,7 +343,31 @@ private:
    */
   static float mapIntensity(float x, float in_min, float in_max, float out_min, float out_max);
 
- 
+  /**
+   * @brief      Calculates the closest point in boundary to pose.
+   *
+   * @param[in]  boundary_poses             The boundary poses
+   * @param[in]  extracted_boundary_points  The extracted boundary points
+   * @param      new_pose_points            The new pose points
+   */
+  static void calculateClosestPointInBoundaryToPose(const EigenPoseMatrix &boundary_poses,
+                                                    const PointCloudVector &extracted_boundary_points,
+                                                    PointVector &new_pose_points);
+
+  /**
+   * @brief      Creates a new pose by moving the position of the original
+   *             pose to the closest boundary point while keeping the same orientation.
+   *
+   * @param[in]  boundary_poses       The original vector of boundary poses
+   * @param[in]  new_boundary_points  The vector of closest the closest boundary point to the corresponding pose
+   * @param      refined_poses        The refined poses
+   */
+  static void movePoseToNewPoint(const EigenPoseMatrix &boundary_poses,
+                                 const PointVector &new_boundary_points,
+                                 EigenPoseMatrix &refined_poses);
+
+
+
 
 public:
 
@@ -416,59 +436,9 @@ public:
 
 
 
-  static void
-  calculateClosestPointInBoundaryToPose(const EigenPoseMatrix &boundary_poses,
-                                        const PointCloudVector &extracted_boundary_points,
-                                        PointVector &new_pose_points)
-  {
-    int K = 1;
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    pcl::PointXYZ searchpoint;
 
-    std::vector<int> pointIdxNKNSearch(K);
-    std::vector<float> pointNKNSquaredDistance(K);
 
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      kdtree.setInputCloud(extracted_boundary_points[i].makeShared());
 
-      searchpoint.x = boundary_poses[i](0, 3);
-      searchpoint.y = boundary_poses[i](1, 3);
-      searchpoint.z = boundary_poses[i](2, 3);
-
-      pcl::PointXYZ temp_point;
-
-      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-      {
-        //for (std::size_t j = 0; j < pointIdxNKNSearch.size(); j++)
-        {
-          temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].x;
-          temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].y;
-          temp_point.z = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].z;
-        }
-
-        new_pose_points.push_back(temp_point);
-      }
-    }
-  }
-
-  static void
-  movePoseToNewPoint(const EigenPoseMatrix &boundary_poses,
-                     const PointVector &new_boundary_points,
-                     EigenPoseMatrix &refined_poses)
-  {
-    Eigen::Matrix4f temp_pose;
-
-    for (std::size_t i = 0; i < boundary_poses.size(); i++)
-    {
-      temp_pose = boundary_poses[i];
-      temp_pose(0, 3) = new_boundary_points[i].x;
-      temp_pose(1, 3) = new_boundary_points[i].y;
-      temp_pose(2, 3) = new_boundary_points[i].z;
-
-      refined_poses.push_back(temp_pose);
-    }
-  }
 
 
 

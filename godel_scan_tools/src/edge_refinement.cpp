@@ -91,16 +91,17 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
 
     calculateClosestPointInBoundaryToPose(boundary_poses, neighbor_boundary_points, neighbor_new_pose_points);
 
-    // 5) Find any outliers in the new pose points (new points that jump too far).
+    // 5) Move original boundary pose point to new point while keeping same orientation
+    movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
+
+    // 6) Find any outliers in the new pose points (new points that jump too far).
     std::map<int, int> outlier_index; // Pose Number, Number of Points to Add
     calculateOutliersInNewPosePoints(neighbor_new_pose_points, outlier_index);
 
-    // 6) Determines the boundary points that follow the shortest distance between the poses of the two outliers.
+    // 7) Determines the boundary points that follow the shortest distance between the poses of the two outliers.
     std::map<int, PointVector> additional_poses;
     calculateAdditionalPosesRequiredToFillGaps(neighbor_boundary_points, neighbor_new_pose_points, outlier_index, additional_poses);
 
-    // 7) Move original boundary pose point to new point while keeping same orientation
-    movePoseToNewPoint(boundary_poses, neighbor_new_pose_points, refined_poses);
 
     if (debug_display_)
     {
@@ -127,7 +128,7 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
 
   void 
   EdgeRefinement::removeNaNFromPoseTrajectory(const EigenPoseMatrix &original_boundary_poses,
-                              EigenPoseMatrix &boundary_poses_no_nan)
+                                              EigenPoseMatrix &boundary_poses_no_nan)
   {
     for (std::size_t i = 0; i < original_boundary_poses.size(); i++)
     {
@@ -224,16 +225,16 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
 
   float
   EdgeRefinement::calculatePlane(const float &x, const float &y, const float &z, 
-                 const float &a, const float &b, const float &c, 
-                 const float &d)
+                                 const float &a, const float &b, const float &c, 
+                                 const float &d)
   {
     return ((a*x + b*y + c*z) - d);
   }
 
   void 
   EdgeRefinement::refineNeighborPoints(const EigenPoseMatrix &boundary_poses,
-                       const PointCloudVector &boundary_pose_neighbor,
-                       PointCloudVector &refined_boundary_pose_neighbor)
+                                       const PointCloudVector &boundary_pose_neighbor,
+                                       PointCloudVector &refined_boundary_pose_neighbor)
   {
     for (std::size_t i = 0; i < boundary_poses.size(); i++)
     { 
@@ -334,8 +335,8 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
 
   void
   EdgeRefinement::extractBoundaryPointsFromPointCloud(const PointCloudVector &refined_points_cloud,
-                                      const PointCloudBoundaryVector &boundary_cloud,
-                                      PointCloudVector &boundary_points)
+                                                      const PointCloudBoundaryVector &boundary_cloud,
+                                                      PointCloudVector &boundary_points)
   {
     pcl::PointCloud<pcl::PointXYZ> temp_cloud;
 
@@ -373,8 +374,6 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     std::vector<float> pointNKNSquaredDistance(K);
     ordered_point_cloud.push_back(searchpoint);
 
-
-
     for (std::size_t j = 0; j < point_cloud.points.size() - 1; j++)
     {
       kdtree.setInputCloud(unordered_point_cloud.makeShared());
@@ -386,7 +385,10 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
       }
     }
 
-    #if 0
+    bool debug_boundary_viewer = false;
+    
+    if (debug_boundary_viewer)
+    {
       boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("temp"));
       viewer->setBackgroundColor (0, 0, 0);
       pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> unordered(point_cloud.makeShared(), 255, 0, 0);
@@ -408,7 +410,7 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
         viewer->spinOnce (100);
         boost::this_thread::sleep (boost::posix_time::microseconds (100000));
       }
-    #endif
+    }
 
     return ordered_point_cloud;
   }
@@ -430,6 +432,56 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
   }
 
+  void
+  EdgeRefinement::calculateClosestPointInBoundaryToPose(const EigenPoseMatrix &boundary_poses,
+                                                        const PointCloudVector &extracted_boundary_points,
+                                                        PointVector &new_pose_points)
+  {
+    int K = 1;
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    pcl::PointXYZ searchpoint;
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      kdtree.setInputCloud(extracted_boundary_points[i].makeShared());
+
+      searchpoint.x = boundary_poses[i](0, 3);
+      searchpoint.y = boundary_poses[i](1, 3);
+      searchpoint.z = boundary_poses[i](2, 3);
+
+      pcl::PointXYZ temp_point;
+
+      if (kdtree.nearestKSearch(searchpoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+      {
+        temp_point.x = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].x;
+        temp_point.y = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].y;
+        temp_point.z = extracted_boundary_points[i].points[pointIdxNKNSearch[K-1]].z;
+
+        new_pose_points.push_back(temp_point);
+      }
+    }
+  }
+
+  void
+  EdgeRefinement::movePoseToNewPoint(const EigenPoseMatrix &boundary_poses,
+                                     const PointVector &new_boundary_points,
+                                     EigenPoseMatrix &refined_poses)
+  {
+    Eigen::Matrix4f temp_pose;
+
+    for (std::size_t i = 0; i < boundary_poses.size(); i++)
+    {
+      temp_pose = boundary_poses[i];
+      temp_pose(0, 3) = new_boundary_points[i].x;
+      temp_pose(1, 3) = new_boundary_points[i].y;
+      temp_pose(2, 3) = new_boundary_points[i].z;
+
+      refined_poses.push_back(temp_pose);
+    }
+  }
 
 
 } // namespace godel_scan_tools

@@ -547,6 +547,206 @@ EdgeRefinement::EdgeRefinement(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud):
     return round(1.5*(number_of_points - 2)); // -2 because of the original two points.
   }
 
+  float 
+  EdgeRefinement::maxValueOfVector(std::vector<float> &vec)
+  {
+    float max_value = 0;
+    for (std::size_t i = 0; i < vec.size(); i++)
+    {
+      if (vec[i] > max_value) { max_value = vec[i]; }
+    }
+    return max_value;
+  }
+
+  // Note: Debug statements have been left in since this is still in development.
+  void
+  EdgeRefinement::calculateAdditionalPosesRequiredToFillGaps(const PointCloudVector &boundary_points, 
+                                                             const PointVector &neighbor_new_pose_points, 
+                                                             const std::map<int, int> &outlier_index,
+                                                             std::map<int, PointVector> &additional_poses)
+  {
+    for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
+    {
+      int index = it->first;
+      int num_poses_required = it->second;
+      std::cout << "Index #: " << index << std::endl;
+      additional_poses[it->first] = calculateClosestBoundaryPointToNextPose(boundary_points, 
+                                      neighbor_new_pose_points, index, num_poses_required);
+    }
+
+    // Debug check
+    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
+    {
+      std::cout << "Pose: " << it->first << " requires the following additional points:" << std::endl;
+      for (std::size_t i = 0; i < it->second.size(); i++)
+      {
+        std::cout << it->second[i] << std::endl;
+      }
+    }
+  }
+
+  // Note: Debug statements have been left in since this is still in development.
+  PointVector
+  EdgeRefinement::calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
+                                                          const PointVector &neighbor_new_pose_points, 
+                                                          const int &index,
+                                                          const int &num_poses_required)
+  {
+    PointVector additional_points;
+    int K = 1;
+    int pose_index;
+    int closest_pose_index;
+
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+    kdtree.setInputCloud(boundary_points[index].makeShared());
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    {
+      pose_index = pointIdxNKNSearch[0];
+      std::cout << "Pose Index: " << pose_index << std::endl;
+    }
+
+    if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    {
+      closest_pose_index = pointIdxNKNSearch[0];
+      std::cout << "Closest Pose Index: " << closest_pose_index << std::endl;
+    }
+    
+    if (pose_index == 0 && closest_pose_index > 0)
+    {
+      // This means the shortest way to the other pose is to move to the next pose in the boundary.
+      if ((closest_pose_index - pose_index) < ((boundary_points[index].width / 2)))
+      {
+        std::cout << "The closest way to get to closest_pose_index is to add" << std::endl;
+        if (closest_pose_index > num_poses_required)
+        {
+          std::cout << "Skipping Points" << std::endl;
+          int skip_point = (int)floor(closest_pose_index / num_poses_required);
+          for (std::size_t i = pose_index; i < closest_pose_index; i += skip_point)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+        }
+        else
+        {
+          std::cout << "Not Skipping Points" << std::endl;
+          for (std::size_t i = pose_index; i < closest_pose_index; i++)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+        }
+      }
+
+      // This means the shortest way to the other pose is to move backwards in the boundary.
+      else
+      {
+        std::cout << "The closest way to get to the closest_pose_index is to subtract" << std::endl;
+        if ((boundary_points[index].width - 1 - closest_pose_index) > num_poses_required)
+        {
+          std::cout << "Skipping Points" << std::endl;
+
+          int skip_point = (int)floor((boundary_points[index].width - 1 - closest_pose_index) / num_poses_required);
+
+          additional_points.push_back(boundary_points[index].points[pose_index]);
+          for (std::size_t i = (boundary_points[index].width - 2); i > closest_pose_index; i -= skip_point)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+        }
+        else
+        {
+          std::cout << "Not Skipping Points" << std::endl;
+
+          for (std::size_t i = closest_pose_index; i < (boundary_points[index].width - 1); i++)
+          {
+            additional_points.push_back(boundary_points[index].points[i]);
+          }
+          additional_points.push_back(boundary_points[index].points[pose_index]);
+        }
+      }
+    }
+    return additional_points;
+  }
+
+  // Note: Debug statements have been left in since this is still in development.
+  void
+  EdgeRefinement::addAdditionalPosesToRefinedPoses(const EigenPoseMatrix &boundary_poses,
+                                                   const std::map<int, PointVector> &additional_poses,
+                                                   EigenPoseMatrix &refined_poses)
+  {
+    int total_points_to_add = 0;
+
+    std::vector<int> additional_pose_indices;
+    additional_pose_indices.reserve(additional_poses.size());
+
+    std::vector<PointVector> additional_pose_points;
+    additional_pose_points.reserve(additional_poses.size());
+    
+    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
+    {
+      additional_pose_indices.push_back(it->first);
+      additional_pose_points.push_back(it->second);
+      total_points_to_add += it->second.size();
+    }
+
+    std::vector<int> new_indices;
+    new_indices.reserve(additional_poses.size());
+
+    int count;
+    for (std::size_t i = 0; i < additional_pose_indices.size(); i++)
+    {
+      if (i == 0) 
+      { 
+        new_indices.push_back(additional_pose_indices[i]);
+        count = additional_pose_points[i].size();
+      }
+      else
+      {
+        new_indices.push_back(additional_pose_indices[i] + count);
+        count += additional_pose_points[i].size();
+      }
+    }
+
+    for (std::size_t i = 0; i < new_indices.size(); i++)
+    {
+      EigenPoseMatrix temp_additional_pose_matrix = convertPointsToEigenMatrix(boundary_poses, 
+                                                                               additional_pose_points[i], 
+                                                                               additional_pose_indices[i]);
+      EigenPoseMatrix::iterator it;
+      it = refined_poses.begin();
+      it = refined_poses.insert(it + new_indices[i] + 1, temp_additional_pose_matrix.begin(), temp_additional_pose_matrix.end());
+    }
+
+    // Debug Check
+    std::cout << "Size of Refined Pose Matrix: " << refined_poses.size() << std::endl;
+    for (std::size_t i = 0; i < new_indices.size(); i++)
+    {
+      std::cout << "Old Index: " << additional_pose_indices[i] <<
+      " Points Added: " << additional_pose_points[i].size() << " New Index: " << new_indices[i] << std::endl;
+    }
+  }
+
+  EigenPoseMatrix
+  EdgeRefinement::convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
+                                             const PointVector &points,
+                                             const int &index)
+  {
+    EigenPoseMatrix additional_poses;
+    additional_poses.reserve(points.size());
+
+    Eigen::Matrix4f temp_pose;
+    for (std::size_t i = 0; i < points.size(); i++)
+    {
+      temp_pose = boundary_poses[index];
+      temp_pose(0, 3) = points[i].x;
+      temp_pose(1, 3) = points[i].y;
+      temp_pose(2, 3) = points[i].z;
+      additional_poses.push_back(temp_pose);
+    }
+    return additional_poses;
+  }
 
 
 } // namespace godel_scan_tools

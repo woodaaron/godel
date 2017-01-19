@@ -380,7 +380,7 @@ private:
    */
   static void calculateOutliersInNewPosePoints(const PointVector &neighbor_new_pose_points,
                                                std::map<int, int> &outlier_index);
-  
+
   /**
    * @brief      Calculates the distance between two points given a point vector and the index of the points.
    *
@@ -403,13 +403,72 @@ private:
    */
   static int calculateNumberOfPointsToInsert(const float &distance_between_points,
                                              const float &standard_deviation);
- 
 
+  /**
+   * @brief      Calculates the maximum value in a vector of floats.
+   *
+   * @param      vec   The vector
+   *
+   * @return     The maximum value.
+   */
+  static float maxValueOfVector(std::vector<float> &vec);
 
+  /**
+   * @brief      Calculates the additional poses required to fill gaps.
+   * 
+   *             NOTE: Debug statements have been left in the implementation since this is still in development.
+   *
+   * @param[in]  boundary_points           The boundary points
+   * @param[in]  neighbor_new_pose_points  The neighbor new pose points
+   * @param[in]  outlier_index             The outlier index
+   * @param      additional_poses          The additional poses
+   */
+  static void calculateAdditionalPosesRequiredToFillGaps(const PointCloudVector &boundary_points, 
+                                                         const PointVector &neighbor_new_pose_points, 
+                                                         const std::map<int, int> &outlier_index,
+                                                         std::map<int, PointVector> &additional_poses);
 
+  /**
+   * @brief      Calculates a vector of points to fill the gab between the two poses.
+   *             It will be left as an excercise to the reader to determine how this works.
+   *
+   *             NOTE: Debug statements have been left in the implementation since this is still in development.
+   *
+   * @param[in]  boundary_points           The boundary points
+   * @param[in]  neighbor_new_pose_points  The neighbor new pose points
+   * @param[in]  index                     The index
+   * @param[in]  num_poses_required        The number poses required
+   *
+   * @return     A vector of points that fill the large gap between two poses.
+   */
+  static PointVector calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
+                                                            const PointVector &neighbor_new_pose_points, 
+                                                            const int &index,
+                                                            const int &num_poses_required);
 
-
-
+  /**
+   * @brief      Adds additional poses to refined poses.
+   *
+   * @param[in]  boundary_poses    The boundary poses
+   * @param[in]  additional_poses  The additional poses
+   * @param      refined_poses     The refined poses
+   */
+  static void addAdditionalPosesToRefinedPoses(const EigenPoseMatrix &boundary_poses,
+                                               const std::map<int, PointVector> &additional_poses,
+                                               EigenPoseMatrix &refined_poses);
+  
+  /**
+   * @brief      { function_description }
+   *
+   * @param[in]  boundary_poses  The boundary poses
+   * @param[in]  points          The points
+   * @param[in]  index           The index
+   *
+   * @return     { description_of_the_return_value }
+   */
+  static EigenPoseMatrix convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
+                                                    const PointVector &points,
+                                                    const int &index);
 
 public:
 
@@ -556,7 +615,6 @@ public:
         for (std::size_t i = 0; i < it->second.size(); i++)
         {
           std::string additional_name = "additional_pose_" + std::to_string(i);
-          // Might be able to remove this.
           if (i == it->second.size()-1)
             debug_display_data->viewer_->addSphere(it->second[i], 0.001*2.5, 0.0, 1.0, 0.0, additional_name);
           else
@@ -619,217 +677,13 @@ public:
 
 
 
-  static PointVector
-  calculateClosestBoundaryPointToNextPose(const PointCloudVector &boundary_points, 
-                                          const PointVector &neighbor_new_pose_points, 
-                                          const int &index,
-                                          const int &num_poses_required)
-  {
-    PointVector additional_points;
-    int K = 1;
-    int pose_index;
-    int closest_pose_index;
 
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    kdtree.setInputCloud(boundary_points[index].makeShared());
-    std::vector<int> pointIdxNKNSearch(K);
-    std::vector<float> pointNKNSquaredDistance(K);
 
-    if (kdtree.nearestKSearch(neighbor_new_pose_points[index], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-    {
-      {
-        pose_index = pointIdxNKNSearch[0];
-        std::cout << "Pose Index: " << pose_index << std::endl;
-      }
-    }
 
-    if (kdtree.nearestKSearch(neighbor_new_pose_points[index+1], K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-    {
-      closest_pose_index = pointIdxNKNSearch[0];
-      std::cout << "Closest Pose Index: " << closest_pose_index << std::endl;
-    }
-    
-    if (pose_index == 0 && closest_pose_index > 0)
-    {
-      // This means the shortest way to the other pose is to move to the next pose in the boundary.
-      if ((closest_pose_index - pose_index) < ((boundary_points[index].width / 2)))
-      {
-        std::cout << "The closest way to get to closest_pose_index is to add" << std::endl;
-        if (closest_pose_index > num_poses_required)
-        {
-          std::cout << "Skipping Points" << std::endl;
-          int skip_point = (int)floor(closest_pose_index / num_poses_required);
-          for (std::size_t i = pose_index; i < closest_pose_index; i += skip_point)
-          {
-            additional_points.push_back(boundary_points[index].points[i]);
-          }
-        }
-        else
-        {
-          std::cout << "Not Skipping Points" << std::endl;
-          for (std::size_t i = pose_index; i < closest_pose_index; i++)
-          {
-            additional_points.push_back(boundary_points[index].points[i]);
-          }
-        }
-      }
 
-      // This means the shortest way to the other pose is to move backwards in the boundary.
-      else
-      {
-        std::cout << "The closest way to get to the closest_pose_index is to subtract" << std::endl;
-        //if ((closest_pose_index - ((boundary_points[index].width / 2)) > num_poses_required)
-        if ((boundary_points[index].width - 1 - closest_pose_index) > num_poses_required)
-        {
-          std::cout << "Skipping Points" << std::endl;
-          //int skip_point = (int)floor((closest_pose_index - ((boundary_points[index].width - 1) / 2)) / num_poses_required);
-          int skip_point = (int)floor((boundary_points[index].width - 1 - closest_pose_index) / num_poses_required);
 
-          /*
-          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width - 1) / 2)); i+= skip_point)
-          {
-            if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
-            else
-            {
-              int point_index = boundary_points[index].width - i - skip_point;
-              additional_points.push_back(boundary_points[index].points[point_index]);
-            }
-          }
-          */
-          //for (std::size_t i = (boundary_points[index].width); i >= closest_pose_index; i -= skip_point)
-          additional_points.push_back(boundary_points[index].points[pose_index]);
-          for (std::size_t i = (boundary_points[index].width - 2); i > closest_pose_index; i -= skip_point)
-          {
-            additional_points.push_back(boundary_points[index].points[i]);
-          }
-        }
-        else
-        {
-          std::cout << "Not Skipping Points" << std::endl;
-          /*
-          for (std::size_t i = 0; i < (closest_pose_index - ((boundary_points[index].width - 1) / 2)); i++)
-          {
-            if (i == 0) { additional_points.push_back(boundary_points[index].points[i]); }
-            else
-            {
-              int point_index = boundary_points[index].width - i;
-              additional_points.push_back(boundary_points[index].points[point_index]);
-            }
-          }
-          */
-          for (std::size_t i = closest_pose_index; i < (boundary_points[index].width - 1); i++)
-          {
-            additional_points.push_back(boundary_points[index].points[i]);
-          }
-          additional_points.push_back(boundary_points[index].points[pose_index]);
-        }
-      }
-    }
-    return additional_points;
-  }
 
-  static void
-  calculateAdditionalPosesRequiredToFillGaps(const PointCloudVector &boundary_points, 
-                              const PointVector &neighbor_new_pose_points, 
-                              const std::map<int, int> &outlier_index,
-                              std::map<int, PointVector> &additional_poses)
-  {
-    for (std::map<int, int>::const_iterator it = outlier_index.begin(); it != outlier_index.end(); it++)
-    {
-      int index = it->first;
-      int num_poses_required = it->second;
-      std::cout << "Index #: " << index << std::endl;
-      additional_poses[it->first] = calculateClosestBoundaryPointToNextPose(boundary_points, 
-                                      neighbor_new_pose_points, index, num_poses_required);
-    }
 
-    // Debug check
-    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
-    {
-      std::cout << "Pose: " << it->first << " requires the following additional points:" << std::endl;
-      for (std::size_t i = 0; i < it->second.size(); i++)
-      {
-        std::cout << it->second[i] << std::endl;
-      }
-    }
-  }
-
-  static EigenPoseMatrix
-  convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
-                             const PointVector &points,
-                             const int &index)
-  {
-    EigenPoseMatrix additional_poses;
-    additional_poses.reserve(points.size());
-
-    Eigen::Matrix4f temp_pose;
-    for (std::size_t i = 0; i < points.size(); i++)
-    {
-      temp_pose = boundary_poses[index];
-      temp_pose(0, 3) = points[i].x;
-      temp_pose(1, 3) = points[i].y;
-      temp_pose(2, 3) = points[i].z;
-      additional_poses.push_back(temp_pose);
-    }
-    return additional_poses;
-  }
-
-  static void
-  addAdditionalPosesToRefinedPoses(const EigenPoseMatrix &boundary_poses,
-                                   const std::map<int, PointVector> &additional_poses,
-                                   EigenPoseMatrix &refined_poses)
-  {
-    int total_points_to_add = 0;
-
-    std::vector<int> additional_pose_indices;
-    additional_pose_indices.reserve(additional_poses.size());
-
-    std::vector<PointVector> additional_pose_points;
-    additional_pose_points.reserve(additional_poses.size());
-    
-    for (std::map<int, PointVector>::const_iterator it = additional_poses.begin(); it != additional_poses.end(); it++)
-    {
-      additional_pose_indices.push_back(it->first);
-      additional_pose_points.push_back(it->second);
-      total_points_to_add += it->second.size();
-    }
-
-    std::vector<int> new_indices;
-    new_indices.reserve(additional_poses.size());
-
-    int count;
-    for (std::size_t i = 0; i < additional_pose_indices.size(); i++)
-    {
-      if (i == 0) 
-      { 
-        new_indices.push_back(additional_pose_indices[i]);
-        count = additional_pose_points[i].size();
-      }
-      else
-      {
-        new_indices.push_back(additional_pose_indices[i] + count);
-        count += additional_pose_points[i].size();
-      }
-    }
-
-    for (std::size_t i = 0; i < new_indices.size(); i++)
-    {
-      EigenPoseMatrix temp_additional_pose_matrix = convertPointsToEigenMatrix(boundary_poses, 
-                                                                               additional_pose_points[i], 
-                                                                               additional_pose_indices[i]);
-      EigenPoseMatrix::iterator it;
-      it = refined_poses.begin();
-      it = refined_poses.insert(it + new_indices[i] + 1, temp_additional_pose_matrix.begin(), temp_additional_pose_matrix.end());
-    }
-
-    // Debug Check
-    std::cout << "Size of Refined Pose Matrix: " << refined_poses.size() << std::endl;
-    for (std::size_t i = 0; i < new_indices.size(); i++)
-    {
-      std::cout << "Old Index: " << additional_pose_indices[i] <<
-      " Points Added: " << additional_pose_points[i].size() << " New Index: " << new_indices[i] << std::endl;
-    }
-  }
 
 private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud_;

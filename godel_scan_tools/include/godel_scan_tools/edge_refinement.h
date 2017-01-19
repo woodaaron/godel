@@ -447,7 +447,9 @@ private:
                                                             const int &num_poses_required);
 
   /**
-   * @brief      Adds additional poses to refined poses.
+   * @brief      Adds additional poses to refined poses. This results in the finalized vector of refined poses.
+   * 
+   *             NOTE: Debug statements have been left in the implementation since this is still in development.
    *
    * @param[in]  boundary_poses    The boundary poses
    * @param[in]  additional_poses  The additional poses
@@ -458,232 +460,55 @@ private:
                                                EigenPoseMatrix &refined_poses);
   
   /**
-   * @brief      { function_description }
+   * @brief      Converts a point into an eigen pose matrix.
    *
    * @param[in]  boundary_poses  The boundary poses
    * @param[in]  points          The points
    * @param[in]  index           The index
    *
-   * @return     { description_of_the_return_value }
+   * @return     An eigen pose matrix at that point.
    */
   static EigenPoseMatrix convertPointsToEigenMatrix(const EigenPoseMatrix &boundary_poses,
                                                     const PointVector &points,
                                                     const int &index);
 
-public:
+  /**
+   * @brief      Gets the point density.
+   * 
+   *             Some function Dr. Chris Lewis wrote, leaving it in here in case we
+   *             need it in the future.
+   *             
+   * @return     The point density.
+   */
+  float getPointDensity(void);
 
-#if 1
-  float 
-  getPointDensity(void)
-  {
-    if(point_density_ > 0) 
-      return(point_density_);
+  /**
+   * @brief      Keyboard callback for debug display.
+   *
+   * @param[in]  event                    The event
+   * @param      debug_display_data_void  The debug display data void
+   */
+  static void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
+                                    void* debug_display_data_void);
 
-    int n = input_cloud_->points.size();
-    int K = 100;
-
-    pcl::PointXYZ pt = input_cloud_->points[n/1];
-    std::vector<int> pt_indices(K);
-    std::vector<float> pt_sq_distances(K);
-
-    int num_found;
-    if((num_found = tree_->nearestKSearch(pt, K, pt_indices, pt_sq_distances))>0)
-    {
-      double maxd = 0;
-      int maxi = 0;
-      for(int i = 0; i < K; i++) // note, there should be one point with zero distance
-      {
-        if(maxd < pt_sq_distances[i]) 
-        {
-          maxd = pt_sq_distances[i];
-          maxi = i;
-        }
-      }
-
-      //printf("maxd = %lf\n",maxd);
-
-      double r = sqrt(maxd);
-      double v = 4/3*3.14*r*r*r; /* volume containing K points Kpts/V */
-
-      point_density_ = K/v; // k pts per vol
-      radius_ = cbrt(3/(4*3.13*point_density_))/150;
-
-      //printf("calculated radius_ = %f\n",radius_);
-      sradius_ = radius_;
-    }
-
-    else
-    {
-      printf("Could not find %d points near center of input_cloud_\n",K);
-      point_density_ = 0.0;
-    }
-    return(point_density_);
-  }
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  static void 
-  keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
-                        void* debug_display_data_void)
-  {
-    DebugDisplayData *debug_display_data = static_cast<DebugDisplayData *> (debug_display_data_void);
-
-    if (event.getKeySym() == "Right" && event.keyDown())
-    {
-      if (debug_display_data->current_pose_index_ >= 0 || debug_display_data->current_pose_index_ <= debug_display_data->num_poses_)
-      {
-        if (debug_display_data->current_pose_index_ == debug_display_data->num_poses_) { debug_display_data->current_pose_index_ = 0; }
-        else { debug_display_data->current_pose_index_++; }
-      }
-    }
-
-    if (event.getKeySym() == "Left" && event.keyDown())
-    {
-      if (debug_display_data->current_pose_index_ >= 0 || debug_display_data->current_pose_index_ <= debug_display_data->num_poses_)
-      {
-        if (debug_display_data->current_pose_index_ == 0) { debug_display_data->current_pose_index_ = debug_display_data->num_poses_; }
-        else { debug_display_data->current_pose_index_--; }
-      }
-    }
-
-    std::string display_text;
-    display_text = "Current Pose: " + std::to_string(debug_display_data->current_pose_index_);
-    debug_display_data->viewer_->updateText(display_text, 0, 15, "current pose");
-    debug_display_data->viewer_->removeShape("pose point");
-    debug_display_data->viewer_->removeShape("new point");
-    debug_display_data->viewer_->removePointCloud("nearest N neighbors");
-    debug_display_data->viewer_->removePointCloud("N neighbors in plane");
-    debug_display_data->viewer_->removePointCloud("Boundary Points");
-
-    if (debug_display_data->rendered_additional_shapes_ == true)
-    {
-      for (std::size_t i = 0; i < debug_display_data->rendered_shape_count_; i++)
-      {
-        std::string additional_name = "additional_pose_" + std::to_string(i);
-        debug_display_data->viewer_->removeShape(additional_name);
-      }
-      debug_display_data->rendered_additional_shapes_ = false;
-    }
-          
-    pcl::PointXYZ pose_point;
-    pose_point.x = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](0, 3);
-    pose_point.y = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](1, 3);
-    pose_point.z = debug_display_data->boundary_poses_[debug_display_data->current_pose_index_](2, 3);
-    // Pose Point
-    debug_display_data->viewer_->addSphere(pose_point, 0.001*2.5, 1.0, 0.0, 0.0, "pose point");
-    // Points within certain radius or K neighbors
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_1(debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), 0, 255, 0);
-    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_1, "nearest N neighbors");
-    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "nearest N neighbors");
-    // Points within plane
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_2(debug_display_data->refined_boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), 0, 0, 255);
-    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->refined_boundary_pose_neighbor_[debug_display_data->current_pose_index_].makeShared(), single_color_2, "N neighbors in plane");
-    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "N neighbors in plane");
-    // Boundary Points
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color_3(debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), 255, 255, 0);
-    debug_display_data->viewer_->addPointCloud<pcl::PointXYZ> (debug_display_data->neighbor_boundary_points_[debug_display_data->current_pose_index_].makeShared(), single_color_3, "Boundary Points");
-    debug_display_data->viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1.5, "Boundary Points");
-    // New Point
-    debug_display_data->viewer_->addSphere(debug_display_data->new_pose_points_[debug_display_data->current_pose_index_], 0.001*2.5, 0.0, 1.0, 0.0, "new point");
-
-    for (std::map<int, PointVector>::const_iterator it = debug_display_data->additional_poses_.begin();
-         it != debug_display_data->additional_poses_.end(); it++)
-    {  
-      if (it->first == debug_display_data->current_pose_index_)// || (it->first + 1) == debug_display_data->current_pose_index_)
-      {
-        for (std::size_t i = 0; i < it->second.size(); i++)
-        {
-          std::string additional_name = "additional_pose_" + std::to_string(i);
-          if (i == it->second.size()-1)
-            debug_display_data->viewer_->addSphere(it->second[i], 0.001*2.5, 0.0, 1.0, 0.0, additional_name);
-          else
-            debug_display_data->viewer_->addSphere(it->second[i], 0.001*2.5, 0.0, 1.0, 0.0, additional_name);
-        }
-        debug_display_data->rendered_shape_count_ = it->second.size();
-        debug_display_data->rendered_additional_shapes_ = true;
-      }
-    }
-  }
-
-  void
-  debugDisplay(const EigenPoseMatrix &boundary_poses,
-               const PointCloudVector &boundary_pose_neighbor,
-               const PointCloudVector &refined_boundary_pose_neighbor,
-               const PointCloudVector &neighbor_boundary_points,
-               const PointVector &new_pose_points,
-               const EigenPoseMatrix &refined_poses,
-               const std::map<int, PointVector> &additional_poses)
-  {
-    
-    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(visual_cloud_);
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Debug Viewer"));
-    viewer->setBackgroundColor(0, 0, 0);
-    viewer->addCoordinateSystem(1.0);
-
-    viewer->initCameraParameters();
-    viewer->addPointCloud<pcl::PointXYZRGB> (visual_cloud_, "input cloud");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "input cloud");
-    viewer->addText("Current Pose: ", 0, 15, "current pose");
-
-    for (std::size_t i = 0; i < (boundary_poses.size() - 1); i++)
-    {
-      assert(boundary_poses.size() == refined_poses.size()); // May need to remove this in the future?
-      std::string original_name = "original_line_" + std::to_string(i);
-      std::string refined_name = "refined_line_" + std::to_string(i);
-      pcl::PointXYZ original_p1(boundary_poses[i](0,3), boundary_poses[i](1,3), boundary_poses[i](2,3));
-      pcl::PointXYZ original_p2(boundary_poses[i+1](0,3), boundary_poses[i+1](1,3), boundary_poses[i+1](2,3));
-      pcl::PointXYZ refined_p1(refined_poses[i](0,3), refined_poses[i](1,3), refined_poses[i](2,3));
-      pcl::PointXYZ refined_p2(refined_poses[i+1](0,3), refined_poses[i+1](1,3), refined_poses[i+1](2,3));
-
-      viewer->addLine<pcl::PointXYZ>(original_p1, original_p2, original_name);
-      viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, 1.0, 0.0, 0.0, original_name);
-      viewer->addLine<pcl::PointXYZ>(refined_p1, refined_p2, refined_name);
-      viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, 0.0, 1.0, 0.0, refined_name);
-    }
-
-    DebugDisplayData debug_display_data(current_pose_index_, num_poses_, viewer.get(), 
-                                        boundary_poses, boundary_pose_neighbor, refined_boundary_pose_neighbor,
-                                        neighbor_boundary_points, new_pose_points, additional_poses);
-
-    viewer->registerKeyboardCallback(keyboardEventOccurred, static_cast<void *>(&debug_display_data));
-
-    while (!viewer->wasStopped())
-    {
-      viewer->spinOnce (100);
-      boost::this_thread::sleep(boost::posix_time::microseconds (100000));
-    }    
-  }
-
-
-
-
-
-
-
-
-
-
+  /**
+   * @brief      Displays a pcl visualizer showning every step of the edge refinement algorithm.
+   *
+   * @param[in]  boundary_poses                  The boundary poses
+   * @param[in]  boundary_pose_neighbor          The boundary pose neighbor
+   * @param[in]  refined_boundary_pose_neighbor  The refined boundary pose neighbor
+   * @param[in]  neighbor_boundary_points        The neighbor boundary points
+   * @param[in]  new_pose_points                 The new pose points
+   * @param[in]  refined_poses                   The refined poses
+   * @param[in]  additional_poses                The additional poses
+   */
+  void debugDisplay(const EigenPoseMatrix &boundary_poses,
+                    const PointCloudVector &boundary_pose_neighbor,
+                    const PointCloudVector &refined_boundary_pose_neighbor,
+                    const PointCloudVector &neighbor_boundary_points,
+                    const PointVector &new_pose_points,
+                    const EigenPoseMatrix &refined_poses,
+                    const std::map<int, PointVector> &additional_poses);
 
 private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud_;

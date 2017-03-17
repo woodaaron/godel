@@ -1,0 +1,7 @@
+1: straight on
+2: piece rotated 45 deg
+3: piece rotated 90 deg
+4: piece rotated at 90 deg and angled up from table along long axis
+5: piece rotated at 90 deg and angled up from table along short axis
+6: piece at 90 deg, camera tilted along long axis
+7: piece at 90 deg, camera tilted along long and short axis

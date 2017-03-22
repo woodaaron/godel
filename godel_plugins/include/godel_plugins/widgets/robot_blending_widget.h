@@ -158,7 +158,6 @@ protected:
   ros::ServiceClient process_plan_client_;
   ros::ServiceClient surface_blending_parameters_client_;
   ros::ServiceClient get_motion_plans_client_;
-  ros::ServiceClient select_motion_plan_client_;
   ros::ServiceClient load_save_motion_plan_client_;
   ros::ServiceClient rename_surface_client_;
   ros::Subscriber selected_surfaces_subs_;

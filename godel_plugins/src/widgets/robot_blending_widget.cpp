@@ -562,7 +562,6 @@ void RobotBlendingWidget::request_available_motions(std::vector<std::string>& pl
 
 void RobotBlendingWidget::select_motion_plan(const std::string& name, bool simulate)
 {
-  ROS_INFO_STREAM("In select motion plan");
   godel_msgs::SelectMotionPlanActionGoal goal;
   goal.goal.name = name;
   goal.goal.simulate = simulate;

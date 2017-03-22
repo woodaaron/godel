@@ -11,10 +11,10 @@
 
 #include <QtConcurrent/QtConcurrentRun>
 
-const static std::string SELECT_MOTION_PLAN_SERVICE = "select_motion_plan";
+const static std::string SELECT_MOTION_PLAN_ACTION_SERVER_NAME = "select_motion_plan_as";
 
 godel_simple_gui::SimulatingState::SimulatingState(const std::vector<std::string>& plans)
-    : plan_names_(plans)
+    : plan_names_(plans), select_motion_plan_action_client_(SELECT_MOTION_PLAN_ACTION_SERVER_NAME, true)
 {
 }
 
@@ -23,8 +23,6 @@ void godel_simple_gui::SimulatingState::onStart(BlendingWidget& gui)
   gui.setText("Simulating...");
   gui.setButtonsEnabled(false);
 
-  sim_client_ =
-      gui.nodeHandle().serviceClient<godel_msgs::SelectMotionPlan>(SELECT_MOTION_PLAN_SERVICE);
   QtConcurrent::run(this, &SimulatingState::simulateAll);
 }
 
@@ -41,7 +39,9 @@ void godel_simple_gui::SimulatingState::simulateAll()
 {
   for (std::size_t i = 0; i < plan_names_.size(); ++i)
   {
+    simulate_next_ = false;
     simulateOne(plan_names_[i]);
+    while(!simulate_next_);  // wait for the last simulation to finish to avoid pre-empting the plan
   }
 
   Q_EMIT newStateAvailable(new WaitToExecuteState(plan_names_));
@@ -49,12 +49,16 @@ void godel_simple_gui::SimulatingState::simulateAll()
 
 void godel_simple_gui::SimulatingState::simulateOne(const std::string& plan)
 {
-  godel_msgs::SelectMotionPlan srv;
-  srv.request.name = plan;
-  srv.request.simulate = true;
-  srv.request.wait_for_execution = true;
-  if (!sim_client_.call(srv))
-  {
-    ROS_WARN_STREAM("Client simulation request returned false");
-  }
+  godel_msgs::SelectMotionPlanActionGoal goal;
+  goal.goal.name = plan;
+  goal.goal.simulate = true;
+  goal.goal.wait_for_execution = true;
+  select_motion_plan_action_client_.sendGoal(goal.goal,
+    boost::bind(&godel_simple_gui::SimulatingState::selectMotionPlanDoneCallback, this, _1, _2));
+}
+
+void godel_simple_gui::SimulatingState::selectMotionPlanDoneCallback(const actionlib::SimpleClientGoalState& state,
+            const godel_msgs::SelectMotionPlanResultConstPtr& result)
+{
+  simulate_next_ = true;
 }

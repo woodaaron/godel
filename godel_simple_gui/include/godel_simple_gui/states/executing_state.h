@@ -1,6 +1,8 @@
 #ifndef EXECUTING_STATE_H
 #define EXECUTING_STATE_H
 
+#include <actionlib/client/simple_action_client.h>
+#include <godel_msgs/SelectMotionPlanAction.h>
 #include "godel_simple_gui/gui_state.h"
 #include <ros/ros.h>
 
@@ -28,8 +30,11 @@ protected:
   void executeOne(const std::string& plan);
 
 private:
+  bool execute_next_;
   std::vector<std::string> plan_names_;
-  ros::ServiceClient real_client_;
+  actionlib::SimpleActionClient<godel_msgs::SelectMotionPlanAction> select_motion_plan_action_client_;
+  void selectMotionPlanDoneCallback(const actionlib::SimpleClientGoalState& state,
+    const godel_msgs::SelectMotionPlanResultConstPtr& result);
 };
 }
 

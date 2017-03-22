@@ -12,7 +12,7 @@
 
 #include <QtConcurrent/QtConcurrentRun>
 
-const static std::string SELECT_MOTION_PLAN_SERVICE = "select_motion_plan";
+const static std::string SELECT_MOTION_PLAN_ACTION_SERVER_NAME = "select_motion_plan_as";
 
 struct BadExecutionError
 {
@@ -21,7 +21,7 @@ struct BadExecutionError
 };
 
 godel_simple_gui::ExecutingState::ExecutingState(const std::vector<std::string>& plans)
-    : plan_names_(plans)
+    : plan_names_(plans), select_motion_plan_action_client_(SELECT_MOTION_PLAN_ACTION_SERVER_NAME, true)
 {
 }
 
@@ -30,8 +30,6 @@ void godel_simple_gui::ExecutingState::onStart(BlendingWidget& gui)
   gui.setText("Executing...");
   gui.setButtonsEnabled(false);
 
-  real_client_ =
-      gui.nodeHandle().serviceClient<godel_msgs::SelectMotionPlan>(SELECT_MOTION_PLAN_SERVICE);
   QtConcurrent::run(this, &ExecutingState::executeAll);
 }
 
@@ -50,7 +48,9 @@ void godel_simple_gui::ExecutingState::executeAll()
   {
     for (std::size_t i = 0; i < plan_names_.size(); ++i)
     {
+      execute_next_ = false;
       executeOne(plan_names_[i]);
+      while(!execute_next_);
     }
 
     Q_EMIT newStateAvailable(new WaitToExecuteState(plan_names_));
@@ -65,11 +65,21 @@ void godel_simple_gui::ExecutingState::executeAll()
 void godel_simple_gui::ExecutingState::executeOne(const std::string& plan)
 {
   ROS_DEBUG_STREAM("Executing " << plan);
-  godel_msgs::SelectMotionPlan srv;
-  srv.request.name = plan;
-  srv.request.simulate = false;
-  srv.request.wait_for_execution = true;
-  if (!real_client_.call(srv))
+
+  godel_msgs::SelectMotionPlanActionGoal goal;
+  goal.goal.name = plan;
+  goal.goal.simulate = false;
+  goal.goal.wait_for_execution = true;
+  select_motion_plan_action_client_.sendGoal(goal.goal,
+    boost::bind(&godel_simple_gui::ExecutingState::selectMotionPlanDoneCallback, this, _1, _2));
+}
+
+void godel_simple_gui::ExecutingState::selectMotionPlanDoneCallback(const actionlib::SimpleClientGoalState& state,
+            const godel_msgs::SelectMotionPlanResultConstPtr& result)
+{
+  execute_next_ = true;
+
+  if (result.code != godel_msgs::SelectMotionPlanGoal::SUCCESS)
   {
     std::ostringstream ss;
     ss << "Failed to execute plan: " << plan << ". Please see logs for more details.";

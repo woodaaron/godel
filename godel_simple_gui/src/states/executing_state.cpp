@@ -79,7 +79,7 @@ void godel_simple_gui::ExecutingState::selectMotionPlanDoneCallback(const action
 {
   execute_next_ = true;
 
-  if (result->code != godel_msgs::SelectMotionPlanGoal::SUCCESS)
+  if (result->code != godel_msgs::SelectMotionPlanResult::SUCCESS)
   {
     std::ostringstream ss;
     ss << "Failed to execute plan: " << plan << ". Please see logs for more details.";

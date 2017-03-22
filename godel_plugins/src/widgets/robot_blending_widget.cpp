@@ -60,7 +60,6 @@ void RobotBlendingWidget::init()
   surface_detection_client_ = nh.serviceClient<godel_msgs::SurfaceDetection>(SURFACE_DETECTION_SERVICE);
   select_surface_client_ = nh.serviceClient<godel_msgs::SelectSurface>(SELECT_SURFACE_SERVICE);
   get_motion_plans_client_ = nh.serviceClient<godel_msgs::GetAvailableMotionPlans>(GET_AVAILABLE_MOTION_PLANS_SERVICE);
-  select_motion_plan_client_ = nh.serviceClient<godel_msgs::SelectMotionPlan>(SELECT_MOTION_PLAN_SERVICE);
   load_save_motion_plan_client_ = nh.serviceClient<godel_msgs::LoadSaveMotionPlan>(LOAD_SAVE_MOTION_PLAN_SERVICE);
   rename_surface_client_ = nh.serviceClient<godel_msgs::RenameSurface>(RENAME_SURFACE_SERVICE);
 
